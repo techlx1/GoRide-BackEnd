@@ -28,8 +28,32 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome to G-Ride Backend 🚗" });
 });
 
+// 🧩 Debug route to list all registered endpoints
+app.get("/api/debug/routes", (req, res) => {
+  const routes = [];
+
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      routes.push({
+        method: Object.keys(middleware.route.methods)[0].toUpperCase(),
+        path: middleware.route.path,
+      });
+    } else if (middleware.name === "router") {
+      middleware.handle.stack.forEach((handler) => {
+        const route = handler.route;
+        if (route) {
+          routes.push({
+            method: Object.keys(route.methods)[0].toUpperCase(),
+            path: route.path,
+          });
+        }
+      });
+    }
+  });
+
+  res.json({ routes });
+});
+
 // 🖥️ Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
