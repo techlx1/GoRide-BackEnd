@@ -1,52 +1,26 @@
-import { supabase } from "../server.js";
+// controllers/profileController.js
+import { pool } from "../models/db.js"; // or however you connect to DB
 
-export const getProfile = async (req, res) => {
+// GET /api/profile/me
+export const getUserProfile = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", id).single();
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    if (error) throw error;
+    const result = await pool.query(
+      "SELECT id, full_name, email, phone, created_at FROM profiles WHERE id = $1",
+      [userId]
+    );
 
-    res.status(200).json({ success: true, profile: data });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
 
-export const updateProfile = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { full_name, phone, avatar_url, date_of_birth } = req.body;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({
-        full_name,
-        phone,
-        avatar_url,
-        date_of_birth,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.status(200).json({ success: true, profile: data });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-export const deleteProfile = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { error } = await supabase.from("profiles").delete().eq("id", id);
-    if (error) throw error;
-
-    res.status(200).json({ success: true, message: "Account deleted successfully" });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({ message: "Server error fetching profile" });
   }
 };
