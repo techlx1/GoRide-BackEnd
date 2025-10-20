@@ -6,6 +6,10 @@ import { createClient } from "@supabase/supabase-js";
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
+import driverStatusRoutes from "./routes/driverStatus.js";
+
+
+
 
 dotenv.config();
 const app = express();
@@ -22,6 +26,7 @@ export const supabase = createClient(
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
+app.use("/api/driver-status", driverStatusRoutes);
 
 // 🩵 Default route
 app.get("/", (req, res) => {
