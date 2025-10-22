@@ -20,4 +20,12 @@ router.get("/vehicle", async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).
+    console.error("Error fetching vehicle info:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch vehicle info",
+    });
+  }
+});
+
+export default router;
