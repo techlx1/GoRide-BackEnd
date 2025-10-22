@@ -7,7 +7,7 @@ import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
-
+import driverRoutes from "./routes/driver.js";
 
 
 
@@ -27,6 +27,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
 app.use("/api/driver-status", driverStatusRoutes);
+app.use("/api/driver", driverRoutes);
 
 // 🩵 Default route
 app.get("/", (req, res) => {
