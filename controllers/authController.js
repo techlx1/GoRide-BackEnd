@@ -1,113 +1,72 @@
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { supabase } from "../server.js";
 
-// 📨 STEP 1: Request password reset (generate and store OTP)
-export const requestPasswordReset = async (req, res) => {
+// ✅ Register new user
+export const registerUser = async (req, res) => {
   try {
-    const { email, phone } = req.body;
+    const { full_name, email, phone, password, user_type } = req.body;
 
-    if (!email && !phone) {
-      return res.status(400).json({
-        success: false,
-        message: "Email or phone is required to request password reset.",
-      });
-    }
+    if (!email && !phone)
+      return res.status(400).json({ success: false, message: "Email or phone required." });
 
-    // Find user by email or phone
-    const { data: user, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .or(`email.eq.${email},phone.eq.${phone}`)
-      .maybeSingle();
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { data, error } = await supabase.from("profiles").insert([
+      {
+        full_name,
+        email,
+        phone,
+        password: hashedPassword,
+        user_type,
+        created_at: new Date(),
+      },
+    ]);
 
     if (error) throw error;
-    if (!user)
-      return res.status(404).json({
-        success: false,
-        message: "No account found with this email or phone.",
-      });
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
-
-    // Save OTP in a temporary table
-    const { error: insertError } = await supabase.from("password_resets").upsert({
-      user_id: user.id,
-      otp,
-      expires_at: expiresAt.toISOString(),
-    });
-
-    if (insertError) throw insertError;
-
-    // (Optional) send email or SMS here
-    console.log(`🔑 OTP for ${email || phone}: ${otp}`);
-
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      message: "Verification code sent successfully. (Check email/SMS)",
+      message: "User registered successfully.",
+      data: data[0],
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
-// ✅ STEP 2: Verify OTP and update password
-export const verifyPasswordReset = async (req, res) => {
+// ✅ Login user (email OR phone)
+export const loginUser = async (req, res) => {
   try {
-    const { email, phone, otp, newPassword } = req.body;
+    const { email, phone, password } = req.body;
 
-    if (!otp || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "OTP and new password are required.",
-      });
-    }
+    if (!email && !phone)
+      return res.status(400).json({ success: false, message: "Email or phone required." });
 
-    // Find user
-    const { data: user } = await supabase
-      .from("profiles")
-      .select("*")
-      .or(`email.eq.${email},phone.eq.${phone}`)
-      .maybeSingle();
+    const query = email
+      ? supabase.from("profiles").select("*").eq("email", email).single()
+      : supabase.from("profiles").select("*").eq("phone", phone).single();
 
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found." });
+    const { data: user, error } = await query;
 
-    // Verify OTP
-    const { data: resetRecord } = await supabase
-      .from("password_resets")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("otp", otp)
-      .maybeSingle();
+    if (error || !user) throw new Error("User not found");
 
-    if (!resetRecord)
-      return res.status(400).json({ success: false, message: "Invalid OTP." });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new Error("Invalid credentials");
 
-    if (new Date(resetRecord.expires_at) < new Date()) {
-      return res.status(400).json({ success: false, message: "OTP expired." });
-    }
+    const token = jwt.sign(
+      { id: user.id, email: user.email, phone: user.phone },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update user password
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ password: hashedPassword, updated_at: new Date() })
-      .eq("id", user.id);
-
-    if (updateError) throw updateError;
-
-    // Delete used OTP
-    await supabase.from("password_resets").delete().eq("user_id", user.id);
-
-    res
-      .status(200)
-      .json({ success: true, message: "Password reset successfully." });
+    res.status(200).json({
+      success: true,
+      message: "Login successful.",
+      token,
+      user,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
