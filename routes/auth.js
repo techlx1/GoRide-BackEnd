@@ -1,8 +1,13 @@
-import express from "express";
-import { registerUser, loginUser } from "../controllers/authController.js";
-const router = express.Router();
+import {
+  registerUser,
+  loginUser,
+  resetPassword,
+  requestPasswordReset,
+  verifyPasswordReset,
+} from "../controllers/authController.js";
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-
-export default router;
+router.post("/reset-password", resetPassword);
+router.post("/request-reset", requestPasswordReset); // 👈 NEW
+router.post("/verify-reset", verifyPasswordReset);   // 👈 NEW

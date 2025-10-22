@@ -1,16 +1,21 @@
-import express from "express";
-import { createRide, getAllRides, updateRideStatus } from "../controllers/ridesController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
-
-const router = express.Router();
-
-// Create a new ride request
-router.post("/", verifyToken, createRide);
-
-// Get all rides for a specific user
-router.get("/", verifyToken, getAllRides);
-
-// Update ride status (accepted, in_progress, completed)
-router.put("/:id/status", verifyToken, updateRideStatus);
-
-export default router;
+// 🚗 Driver statistics endpoint
+router.get("/stats", async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      stats: {
+        todayEarnings: 2450.75,
+        tripsCompleted: 12,
+        averageRating: 4.8,
+        hoursWorked: 8.5,
+        weeklyGrowth: 15.2,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching ride stats",
+      error: error.message,
+    });
+  }
+});
