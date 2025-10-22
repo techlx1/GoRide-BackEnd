@@ -3,38 +3,38 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
+// Route Imports
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
 import driverRoutes from "./routes/driver.js";
 
-
-
+// 🌍 Environment setup
 dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🌍 Initialize Supabase
+// 🌐 Initialize Supabase Client
 export const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-// 🧩 Routes
+// 🧩 Attach Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
 app.use("/api/driver-status", driverStatusRoutes);
 app.use("/api/driver", driverRoutes);
 
-// 🩵 Default route
+// 🩵 Root route
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to G-Ride Backend 🚗" });
 });
 
-// 🧩 Debug route to list all registered endpoints
+// 🧭 Debug endpoint — shows all registered API paths
 app.get("/api/debug/routes", (req, res) => {
   const routes = [];
 
@@ -57,9 +57,11 @@ app.get("/api/debug/routes", (req, res) => {
     }
   });
 
-  res.json({ routes });
+  res.json({ success: true, total: routes.length, routes });
 });
 
-// 🖥️ Start server
+// 🖥️ Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);
