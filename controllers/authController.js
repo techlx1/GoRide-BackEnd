@@ -5,11 +5,10 @@ import pool from "../config/db.js";
 /**
  * 🧍 Register new user
  */
-
-
 export const registerUser = async (req, res) => {
   try {
-    console.log("📩 Incoming registration data:", req.body); // 🔍 Debug line
+    console.log("📩 Incoming registration data:", req.body);
+
     const { full_name, email, phone, password, user_type } = req.body;
 
     if (!full_name || !email || !phone || !password) {
@@ -20,7 +19,7 @@ export const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO profiles (full_name, email, phone, password, user_type)
+      `INSERT INTO public.profiles (full_name, email, phone, password, user_type)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, full_name, email, phone, user_type`,
       [full_name, email, phone, hashedPassword, user_type || "rider"]
@@ -29,9 +28,10 @@ export const registerUser = async (req, res) => {
     return res.status(201).json({ success: true, user: result.rows[0] });
   } catch (error) {
     console.error("Registration Error:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error during registration" });
+    res.status(500).json({
+      success: false,
+      message: `Server error during registration: ${error.message}`,
+    });
   }
 };
 
@@ -43,16 +43,14 @@ export const loginUser = async (req, res) => {
     const { email, phone, password } = req.body;
 
     if ((!email && !phone) || !password) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Email or phone and password are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Email or phone and password are required",
+      });
     }
 
     const userQuery = await pool.query(
-      "SELECT * FROM profiles WHERE email = $1 OR phone = $2",
+      "SELECT * FROM public.profiles WHERE email = $1 OR phone = $2",
       [email, phone]
     );
 
@@ -86,13 +84,12 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-  console.error("Registration Error:", error); // ⬅️ full error log
-  res.status(500).json({
-    success: false,
-    message: `Server error during registration: ${error.message}`,
-  });
-}
-
+    console.error("Login Error:", error);
+    res.status(500).json({
+      success: false,
+      message: `Login failed: ${error.message}`,
+    });
+  }
 };
 
 /**
@@ -107,7 +104,6 @@ export const requestPasswordReset = async (req, res) => {
         .json({ success: false, message: "Email or phone required" });
     }
 
-    // Mock OTP generation
     const otp = Math.floor(100000 + Math.random() * 900000);
     console.log("OTP generated:", otp);
 
