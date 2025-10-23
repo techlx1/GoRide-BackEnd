@@ -5,8 +5,11 @@ import pool from "../config/db.js";
 /**
  * 🧍 Register new user
  */
+
+
 export const registerUser = async (req, res) => {
   try {
+    console.log("📩 Incoming registration data:", req.body); // 🔍 Debug line
     const { full_name, email, phone, password, user_type } = req.body;
 
     if (!full_name || !email || !phone || !password) {
@@ -83,9 +86,13 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ success: false, message: "Login failed" });
-  }
+  console.error("Registration Error:", error); // ⬅️ full error log
+  res.status(500).json({
+    success: false,
+    message: `Server error during registration: ${error.message}`,
+  });
+}
+
 };
 
 /**
