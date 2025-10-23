@@ -9,6 +9,7 @@ import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
 import driverRoutes from "./routes/driver.js";
+import driverOverviewRoutes from "./routes/driverOverview.js";
 
 // 🌍 Environment setup
 dotenv.config();
@@ -28,6 +29,8 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
 app.use("/api/driver-status", driverStatusRoutes);
 app.use("/api/driver", driverRoutes);
+app.use("/api/driver", driverOverviewRoutes);
+
 
 // 🩵 Root route
 app.get("/", (req, res) => {

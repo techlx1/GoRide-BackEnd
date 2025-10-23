@@ -5,10 +5,9 @@ import pool from "../config/db.js";
 const router = express.Router();
 
 /**
- * 🚘 DRIVER DASHBOARD OVERVIEW
- * Combines: Profile + Vehicle + Earnings Stats
+ * 🧭 DRIVER DASHBOARD OVERVIEW
  * Endpoint: GET /api/driver/overview
- * Requires: Bearer token (JWT)
+ * Combines profile, vehicle, and ride statistics
  */
 router.get("/overview", async (req, res) => {
   try {
@@ -24,17 +23,14 @@ router.get("/overview", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const driverId = decoded.id;
 
-    // 👤 Fetch driver profile
+    // 👤 Fetch driver info
     const userQuery = await pool.query(
       "SELECT id, full_name, email, phone, user_type, created_at FROM users WHERE id = $1",
       [driverId]
     );
 
     if (userQuery.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Driver not found",
-      });
+      return res.status(404).json({ success: false, message: "Driver not found" });
     }
 
     const driver = userQuery.rows[0];
@@ -56,47 +52,49 @@ router.get("/overview", async (req, res) => {
         status: "Active",
       };
 
-    // 💰 Fetch ride stats
+    // 📊 Fetch ride stats
     const statsQuery = await pool.query(
       `SELECT 
-        COUNT(*) AS trips_completed,
+        COUNT(*) AS total_trips,
         COALESCE(SUM(fare_amount), 0) AS total_earnings,
         COALESCE(AVG(rating), 0) AS avg_rating
       FROM rides
-      WHERE driver_id = $1
-      AND start_time >= NOW() - INTERVAL '7 days'`,
+      WHERE driver_id = $1`,
       [driverId]
     );
 
-    const stats = statsQuery.rows[0];
+    const todayQuery = await pool.query(
+      `SELECT 
+        COUNT(*) AS today_trips,
+        COALESCE(SUM(fare_amount), 0) AS today_earnings
+      FROM rides
+      WHERE driver_id = $1 AND DATE(start_time) = CURRENT_DATE`,
+      [driverId]
+    );
 
-    const overview = {
-      profile: {
-        id: driver.id,
-        full_name: driver.full_name,
-        email: driver.email,
-        phone: driver.phone,
-        user_type: driver.user_type,
-        created_at: driver.created_at,
-      },
-      vehicle,
-      stats: {
-        weeklyTrips: Number(stats.trips_completed) || 0,
-        weeklyEarnings: Number(stats.total_earnings) || 0,
-        averageRating: Number(stats.avg_rating).toFixed(1) || 0,
-        hoursWorked: Math.floor(Math.random() * 8) + 4,
-      },
+    const stats = {
+      totalTrips: Number(statsQuery.rows[0].total_trips) || 0,
+      totalEarnings: Number(statsQuery.rows[0].total_earnings) || 0,
+      averageRating: Number(statsQuery.rows[0].avg_rating).toFixed(1) || 0,
+      todayTrips: Number(todayQuery.rows[0].today_trips) || 0,
+      todayEarnings: Number(todayQuery.rows[0].today_earnings) || 0,
+      onlineHours: Math.floor(Math.random() * 8) + 3,
     };
 
-    return res.status(200).json({
+    // 🧩 Final combined response
+    res.status(200).json({
       success: true,
-      overview,
+      overview: {
+        driver,
+        vehicle,
+        stats,
+      },
     });
   } catch (error) {
-    console.error("Driver Overview Error:", error);
+    console.error("Driver overview error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch driver overview",
+      message: "Failed to load driver overview",
     });
   }
 });
