@@ -23,21 +23,27 @@ router.get("/overview", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const driverId = decoded.id;
 
-    // 👤 Fetch driver info
+    // 👤 Fetch driver info from the correct table
     const userQuery = await pool.query(
-      "SELECT id, full_name, email, phone, user_type, created_at FROM users WHERE id = $1",
+      `SELECT id, full_name, email, phone, user_type, created_at 
+       FROM profiles 
+       WHERE id = $1 AND user_type = 'driver'`,
       [driverId]
     );
 
     if (userQuery.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Driver not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Driver not found" });
     }
 
     const driver = userQuery.rows[0];
 
-    // 🚗 Fetch vehicle info
+    // 🚗 Fetch vehicle info (or provide defaults)
     const vehicleQuery = await pool.query(
-      "SELECT make, model, year, license_plate, fuel_level, mileage, status FROM vehicles WHERE driver_id = $1",
+      `SELECT make, model, year, license_plate, fuel_level, mileage, status 
+       FROM vehicles 
+       WHERE driver_id = $1`,
       [driverId]
     );
 
@@ -52,7 +58,7 @@ router.get("/overview", async (req, res) => {
         status: "Active",
       };
 
-    // 📊 Fetch ride stats
+    // 📊 Fetch ride statistics
     const statsQuery = await pool.query(
       `SELECT 
         COUNT(*) AS total_trips,
@@ -81,7 +87,7 @@ router.get("/overview", async (req, res) => {
       onlineHours: Math.floor(Math.random() * 8) + 3,
     };
 
-    // 🧩 Final combined response
+    // 🧩 Final response
     res.status(200).json({
       success: true,
       overview: {
@@ -95,6 +101,7 @@ router.get("/overview", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to load driver overview",
+      error: error.message,
     });
   }
 });
