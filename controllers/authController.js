@@ -55,26 +55,22 @@ export const loginUser = async (req, res) => {
     );
 
     const user = userQuery.rows[0];
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
+    // Check password
     const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword)
+    if (!validPassword) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid password" });
+    }
 
-    const token = jwt.sign(
-      { id: user.id, type: user.user_type },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
+    // ✅ Temporary login success without JWT
     return res.status(200).json({
       success: true,
-      token,
+      message: "Login successful",
       user: {
         id: user.id,
         full_name: user.full_name,
@@ -91,6 +87,7 @@ export const loginUser = async (req, res) => {
     });
   }
 };
+
 
 /**
  * 🔑 Request password reset (mock)
