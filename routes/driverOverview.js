@@ -1,29 +1,24 @@
 import express from "express";
-import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 
 const router = express.Router();
 
 /**
- * 🧭 DRIVER DASHBOARD OVERVIEW
- * Endpoint: GET /api/driver/overview
- * Combines profile, vehicle, and ride statistics
+ * 🚗 DRIVER DASHBOARD OVERVIEW (temporary version — no token)
+ * GET /api/driver/overview/:driverId
  */
-router.get("/overview", async (req, res) => {
+router.get("/overview/:driverId", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
+    const { driverId } = req.params;
+
+    if (!driverId) {
+      return res.status(400).json({
         success: false,
-        message: "Missing or invalid authorization token",
+        message: "Driver ID is required",
       });
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const driverId = decoded.id;
-
-    // 👤 Fetch driver info from the correct table
+    // 👤 Fetch driver info
     const userQuery = await pool.query(
       `SELECT id, full_name, email, phone, user_type, created_at 
        FROM profiles 
@@ -32,14 +27,15 @@ router.get("/overview", async (req, res) => {
     );
 
     if (userQuery.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Driver not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found",
+      });
     }
 
     const driver = userQuery.rows[0];
 
-    // 🚗 Fetch vehicle info (or provide defaults)
+    // 🚗 Vehicle info
     const vehicleQuery = await pool.query(
       `SELECT make, model, year, license_plate, fuel_level, mileage, status 
        FROM vehicles 
@@ -58,7 +54,7 @@ router.get("/overview", async (req, res) => {
         status: "Active",
       };
 
-    // 📊 Fetch ride statistics
+    // 📊 Stats
     const statsQuery = await pool.query(
       `SELECT 
         COUNT(*) AS total_trips,
@@ -87,14 +83,10 @@ router.get("/overview", async (req, res) => {
       onlineHours: Math.floor(Math.random() * 8) + 3,
     };
 
-    // 🧩 Final response
-    res.status(200).json({
+    // ✅ Response
+    res.json({
       success: true,
-      overview: {
-        driver,
-        vehicle,
-        stats,
-      },
+      overview: { driver, vehicle, stats },
     });
   } catch (error) {
     console.error("Driver overview error:", error);

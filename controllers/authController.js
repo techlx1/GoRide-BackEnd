@@ -25,7 +25,20 @@ export const registerUser = async (req, res) => {
       [full_name, email, phone, hashedPassword, user_type || "rider"]
     );
 
-    return res.status(201).json({ success: true, user: result.rows[0] });
+    // Create token right after registration
+    const user = result.rows[0];
+    const token = jwt.sign(
+      { id: user.id, email: user.email, user_type: user.user_type },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token,
+      user,
+    });
   } catch (error) {
     console.error("Registration Error:", error);
     res.status(500).json({
@@ -49,6 +62,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
+    // 🧠 Fetch user
     const userQuery = await pool.query(
       "SELECT * FROM public.profiles WHERE email = $1 OR phone = $2",
       [email, phone]
@@ -59,7 +73,7 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Check password
+    // 🔑 Validate password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res
@@ -67,10 +81,18 @@ export const loginUser = async (req, res) => {
         .json({ success: false, message: "Invalid password" });
     }
 
-    // ✅ Temporary login success without JWT
+    // 🧾 Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, user_type: user.user_type },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // ✅ Return token + user data
     return res.status(200).json({
       success: true,
       message: "Login successful",
+      token,
       user: {
         id: user.id,
         full_name: user.full_name,
@@ -87,7 +109,6 @@ export const loginUser = async (req, res) => {
     });
   }
 };
-
 
 /**
  * 🔑 Request password reset (mock)

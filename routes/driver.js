@@ -17,6 +17,9 @@ router.get("/vehicle", async (req, res) => {
         fuelLevel: 75,
         mileage: 125000,
         status: "Active",
+        photo_url: driver.photo_url || "https://example.com/default-avatar.png",
+        profile_completion: 80, // placeholder or calculated field
+
       },
     });
   } catch (error) {
@@ -29,3 +32,4 @@ router.get("/vehicle", async (req, res) => {
 });
 
 export default router;
+
