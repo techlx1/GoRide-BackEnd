@@ -1,8 +1,9 @@
+// 🌍 Core Dependencies
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
-import pool from "./config/db.js"; // must be imported before routes that use it
+import pool from "./config/db.js"; // PostgreSQL Pool
 
 // 🌍 Environment setup
 dotenv.config();
@@ -10,19 +11,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🌐 Initialize Supabase Client
+// 🌐 Initialize Supabase Client (optional - for storage/auth)
 export const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-// 🧩 Route Imports
+// 🧩 Route Imports (adjust paths if you move folders)
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
 import driverRoutes from "./routes/driver.js";
 import driverOverviewRoutes from "./routes/driverOverview.js";
+import earningsRoutes from "./src/routes/earningsRoutes.js"; // ✅ from your /src directory
 
 // 🧩 Attach Routes
 app.use("/api/auth", authRoutes);
@@ -31,19 +33,24 @@ app.use("/api/rides", ridesRoutes);
 app.use("/api/driver-status", driverStatusRoutes);
 app.use("/api/driver", driverRoutes);
 app.use("/api/driver", driverOverviewRoutes);
+app.use("/api/driver/earnings", earningsRoutes);
 
-// 🩵 Root route
+// 🩵 Root Route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to G-Ride Backend 🚗" });
+  res.json({
+    success: true,
+    message: "🚗 Welcome to G-Ride Backend API",
+    environment: process.env.NODE_ENV || "development",
+  });
 });
 
-// 🧠 Quick connection test endpoint
+// 🧠 Quick Database Connection Test
 app.get("/api/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
     res.json({
       success: true,
-      message: "✅ Database connected successfully!",
+      message: "✅ PostgreSQL connected successfully!",
       time: result.rows[0].now,
     });
   } catch (error) {
@@ -56,7 +63,7 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
-// 🧭 Debug endpoint — shows all registered API paths
+// 🧭 Debug Endpoint — Lists all Active API Routes
 app.get("/api/debug/routes", (req, res) => {
   const routes = [];
   app._router.stack.forEach((middleware) => {
@@ -77,12 +84,17 @@ app.get("/api/debug/routes", (req, res) => {
       });
     }
   });
-  res.json({ success: true, total: routes.length, routes });
+  res.json({
+    success: true,
+    totalRoutes: routes.length,
+    routes,
+  });
 });
 
 // 🖥️ Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log("🧩 Using DATABASE_URL:", process.env.DATABASE_URL);
+  console.log(`🚀 G-Ride Backend running on port ${PORT}`);
+  console.log(`📦 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log("🧩 Connected to:", process.env.DATABASE_URL);
 });
