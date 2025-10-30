@@ -17,18 +17,14 @@ export const supabase = createClient(
   process.env.SUPABASE_KEY
 );
 
-// 🧩 Route Imports (adjust paths if you move folders)
-import authRoutes from "./routes/auth.js";
+// 🧩 Route Imports (make sure these files exist in /routes)
+import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
-import driverRoutes from "./routes/driver.js";
+import driverRoutes from "./routes/driverRoutes.js";
 import driverOverviewRoutes from "./routes/driverOverview.js";
-import earningsRoutes from "./routes/earningsRoutes.js"; 
-import earningsRoutes from './routes/earningsRoutes.js';
-import driverRoutes from './routes/driverRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-
+import earningsRoutes from "./routes/earningsRoutes.js";
 
 // 🧩 Attach Routes
 app.use("/api/auth", authRoutes);
@@ -36,7 +32,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
 app.use("/api/driver-status", driverStatusRoutes);
 app.use("/api/driver", driverRoutes);
-app.use("/api/driver", driverOverviewRoutes);
+app.use("/api/driver/overview", driverOverviewRoutes);
 app.use("/api/driver/earnings", earningsRoutes);
 
 // 🩵 Root Route
