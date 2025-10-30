@@ -18,7 +18,7 @@ export const supabase = createClient(
 );
 
 // 🧩 Route Imports (make sure these files exist in /routes)
-import authRoutes from "./routes/authRoutes.js";
+import auth from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
@@ -27,7 +27,7 @@ import driverOverviewRoutes from "./routes/driverOverview.js";
 import earningsRoutes from "./routes/earningsRoutes.js";
 
 // 🧩 Attach Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", auth);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
 app.use("/api/driver-status", driverStatusRoutes);
