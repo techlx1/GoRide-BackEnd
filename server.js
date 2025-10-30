@@ -24,7 +24,11 @@ import ridesRoutes from "./routes/rides.js";
 import driverStatusRoutes from "./routes/driverStatus.js";
 import driverRoutes from "./routes/driver.js";
 import driverOverviewRoutes from "./routes/driverOverview.js";
-import earningsRoutes from "./src/routes/earningsRoutes.js"; // ✅ from your /src directory
+import earningsRoutes from "./routes/earningsRoutes.js"; 
+import earningsRoutes from './routes/earningsRoutes.js';
+import driverRoutes from './routes/driverRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+
 
 // 🧩 Attach Routes
 app.use("/api/auth", authRoutes);
