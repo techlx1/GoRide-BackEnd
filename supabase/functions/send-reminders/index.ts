@@ -1,23 +1,25 @@
 // supabase/functions/send-reminders/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ✅ Load environment variables
+// ✅ Custom environment variable names (since SUPABASE_ prefix is reserved)
 const supabaseUrl = Deno.env.get("MY_SUPABASE_URL");
 const supabaseKey = Deno.env.get("MY_SUPABASE_SERVICE_ROLE_KEY");
 
+// 🚨 Check for missing variables
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  console.error("❌ Missing environment variables: MY_SUPABASE_URL or MY_SUPABASE_SERVICE_ROLE_KEY");
+  throw new Error("Missing environment variables");
 }
 
 // ✅ Initialize Supabase client
-const supabase = createClient(supabaseUrl!, supabaseKey!);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ✅ Start Function Server
+// 🧠 Start Edge Function
 Deno.serve(async (req) => {
   console.log("🚀 send-reminders function started");
 
   try {
-    // ✅ Fetch sample users (limit for testing)
+    // 🗃️ Fetch driver data from your 'profiles' table
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select("id, full_name, fcm_token, driver_licence_expiry, insurance_expiry")
@@ -32,18 +34,19 @@ Deno.serve(async (req) => {
     }
 
     console.log(`✅ Found ${profiles?.length || 0} profiles`);
-    console.log("🧪 Sample record:", profiles?.[0]);
+    if (profiles?.length) {
+      console.log("Sample record:", profiles[0]);
+    }
 
-    // ✅ Fake reminder loop (for testing logic / logs)
     let totalNotified = 0;
     for (const driver of profiles || []) {
       if (!driver.fcm_token) continue;
-
-      console.log(`📲 Would send reminder to: ${driver.full_name}`);
+      // In a future version, you’ll send push notifications here
+      console.log(`📲 Would send reminder to ${driver.full_name}`);
       totalNotified++;
     }
 
-    console.log(`✅ Done! ${totalNotified} notifications ready`);
+    console.log(`✅ Done! ${totalNotified} notifications ready.`);
 
     return new Response(
       JSON.stringify({
@@ -54,10 +57,12 @@ Deno.serve(async (req) => {
     );
 
   } catch (err) {
-    console.error("🔥 Unhandled error:", err.message);
-
+    console.error("🔥 Unhandled error:", err);
     return new Response(
-      JSON.stringify({ success: false, message: err.message }),
+      JSON.stringify({
+        success: false,
+        message: err.message,
+      }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
