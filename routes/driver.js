@@ -91,5 +91,26 @@ router.post(
     }
   }
 );
+/**
+ * 🔍 Database Connection Test
+ * Endpoint: GET /api/driver/db-test
+ */
+router.get("/db-test", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW() AS current_time");
+    res.status(200).json({
+      success: true,
+      message: "Database connection successful 🎉",
+      time: result.rows[0].current_time,
+    });
+  } catch (error) {
+    console.error("❌ Database test failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed ❌",
+      error: error.message,
+    });
+  }
+});
 
 export default router;
