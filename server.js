@@ -4,8 +4,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import pool from './config/db.js';
 import supabase from './config/supabaseClient.js'; // ✅ Correct path
-import driverRoutes from "./routes/driverRoutes.js";
-
 
 // 🌍 Environment setup
 dotenv.config();
@@ -18,7 +16,7 @@ import authRoutes from './routes/auth.js';
 import profileRoutes from './routes/profile.js';
 import ridesRoutes from './routes/rides.js';
 import driverStatusRoutes from './routes/driverStatus.js';
-import driverRoutes from './routes/driver.js';
+import driverRoutes from './routes/driverRoutes.js';  // ✅ Correct one (keep this)
 import driverOverviewRoutes from './routes/driverOverview.js';
 import driverEarningsRoutes from './routes/driverEarnings.js';
 
@@ -30,7 +28,6 @@ app.use('/api/driver-status', driverStatusRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/driver/overview', driverOverviewRoutes);
 app.use('/api/driver/earnings', driverEarningsRoutes);
-
 
 // 🩵 Root Route
 app.get('/', (req, res) => {
