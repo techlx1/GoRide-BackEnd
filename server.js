@@ -24,7 +24,7 @@ import rides from "./routes/rides.js";
 import driverStatus from "./routes/driverStatus.js";
 import driver from "./routes/driver.js";
 import driverOverview from "./routes/driverOverview.js";
-import earningsRoutes from "./routes/earningsRoutes.js";
+import earningsRoutes from "./routes/driverEarnings.js";
 
 // 🧩 Attach Routes
 app.use("/api/auth", auth);
@@ -33,7 +33,7 @@ app.use("/api/rides", rides);
 app.use("/api/driver-status", driverStatus);
 app.use("/api/driver", driver);
 app.use("/api/driver/overview", driverOverview);
-app.use("/api/driver/earnings", earningsRoutes);
+app.use("/api/driver/earnings", driverEarnings);
 
 // 🩵 Root Route
 app.get("/", (req, res) => {
