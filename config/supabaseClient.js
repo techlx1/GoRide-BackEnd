@@ -1,48 +1,19 @@
-// controllers/driverController.js
-import supabase from "../config/supabaseClient.js";
+// config/supabaseClient.js
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
-/**
- * 🚗 Get vehicle details for the logged-in driver
- * Route: GET /api/driver/vehicle
- * Middleware: verifyToken (must attach req.user)
- */
-export const getDriverVehicle = async (req, res) => {
-  try {
-    const userId = req.user?.id;
+dotenv.config();
 
-    if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized: Missing user token" });
-    }
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  console.error("❌ Missing Supabase credentials. Please check your .env file.");
+  process.exit(1);
+}
 
-    // Fetch the vehicle associated with this driver
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select("*")
-      .eq("driver_id", userId)
-      .maybeSingle(); // ✅ safer than .single(), avoids crash if no vehicle found
+// ✅ Create Supabase client
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
+  auth: { persistSession: false },
+});
 
-    if (error) throw error;
-
-    if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: "No vehicle record found for this driver",
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: "Vehicle retrieved successfully",
-      vehicle: data,
-    });
-  } catch (err) {
-    console.error("❌ getDriverVehicle Error:", err.message);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to retrieve vehicle data",
-      error: err.message,
-    });
-  }
-};
+// ✅ Export both named and default
+export { supabase };
+export default supabase;
