@@ -29,6 +29,7 @@ app.use('/api/driver', driverRoutes);
 app.use('/api/driver/overview', driverOverviewRoutes);
 app.use('/api/driver/earnings', driverEarningsRoutes);
 
+
 // 🩵 Root Route
 app.get('/', (req, res) => {
   res.json({

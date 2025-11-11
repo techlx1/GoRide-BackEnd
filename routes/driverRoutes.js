@@ -18,6 +18,7 @@ const router = express.Router();
  */
 router.get("/profile", verifyToken, getDriverProfile);
 
+
 /**
  * 🚗 VEHICLE INFO
  * GET /api/driver/vehicle
