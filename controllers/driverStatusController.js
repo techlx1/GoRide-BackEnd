@@ -1,4 +1,6 @@
 import { supabase } from "../server.js";
+import supabase from "../config/supabaseClient.js";
+
 
 // 🟢 Update driver coordinates
 export const updateDriverLocation = async (req, res) => {
