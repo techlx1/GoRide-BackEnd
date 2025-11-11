@@ -1,26 +1,18 @@
-// routes/driver.js
 import express from "express";
 import multer from "multer";
-import pool from "../config/db.js";
+import { supabase } from "../supabaseClient.js";
 
 const router = express.Router();
 
-// Configure multer (local storage, can later switch to Supabase)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Folder to store uploaded images
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}_${file.originalname}`);
-  },
-});
+// ⚙️ Configure multer in-memory; we'll stream to Supabase Storage
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 /**
  * 🚘 Add or Update Driver Vehicle Info
- * Endpoint: POST /api/driver/vehicle
- * Body: { driver_id, make, model, year, license_plate }
- * Files: revenue_licence, cert_of_fitness, driver_licence, photo_url
+ * @route  POST /api/drivers/vehicle
+ * @body   { driver_id, make, model, year, license_plate }
+ * @files  revenue_licence, cert_of_fitness, driver_licence, photo_url
  */
 router.post(
   "/vehicle",
@@ -33,56 +25,67 @@ router.post(
   async (req, res) => {
     try {
       const { driver_id, make, model, year, license_plate } = req.body;
-
       if (!driver_id || !make || !model || !year || !license_plate) {
         return res
           .status(400)
           .json({ success: false, message: "All fields are required." });
       }
 
-      // Uploaded file URLs
-      const revenueLicencePath = req.files.revenue_licence
-        ? `/uploads/${req.files.revenue_licence[0].filename}`
-        : null;
+      // ⬆️ Upload each file to Supabase Storage (bucket: 'vehicle_docs')
+      const uploadFile = async (file) => {
+        if (!file) return null;
+        const filePath = `${driver_id}/${Date.now()}_${file.originalname}`;
+        const { data, error } = await supabase.storage
+          .from("vehicle_docs")
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true,
+          });
+        if (error) throw error;
+        const { data: publicUrl } = supabase.storage
+          .from("vehicle_docs")
+          .getPublicUrl(filePath);
+        return publicUrl.publicUrl;
+      };
 
-      const certOfFitnessPath = req.files.cert_of_fitness
-        ? `/uploads/${req.files.cert_of_fitness[0].filename}`
-        : null;
-
-      const driverLicencePath = req.files.driver_licence
-        ? `/uploads/${req.files.driver_licence[0].filename}`
-        : null;
-
-      const photoPath = req.files.photo_url
-        ? `/uploads/${req.files.photo_url[0].filename}`
-        : null;
-
-      // Save to DB
-      const result = await pool.query(
-        `INSERT INTO public.vehicles 
-          (driver_id, make, model, year, license_plate, revenue_licence, cert_of_fitness, driver_licence, photo_url)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING *`,
-        [
-          driver_id,
-          make,
-          model,
-          year,
-          license_plate,
-          revenueLicencePath,
-          certOfFitnessPath,
-          driverLicencePath,
-          photoPath,
-        ]
+      const revenueLicenceUrl = await uploadFile(
+        req.files.revenue_licence?.[0]
       );
+      const certOfFitnessUrl = await uploadFile(
+        req.files.cert_of_fitness?.[0]
+      );
+      const driverLicenceUrl = await uploadFile(req.files.driver_licence?.[0]);
+      const photoUrl = await uploadFile(req.files.photo_url?.[0]);
 
-      res.status(201).json({
+      // 💾 Upsert vehicle record
+      const { data, error } = await supabase
+        .from("vehicles")
+        .upsert(
+          {
+            driver_id,
+            make,
+            model,
+            year,
+            license_plate,
+            revenue_licence: revenueLicenceUrl,
+            cert_of_fitness: certOfFitnessUrl,
+            driver_licence: driverLicenceUrl,
+            photo_url: photoUrl,
+          },
+          { onConflict: "driver_id" }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return res.status(201).json({
         success: true,
         message: "Vehicle information uploaded successfully.",
-        vehicle: result.rows[0],
+        vehicle: data,
       });
     } catch (error) {
-      console.error("❌ Error saving vehicle data:", error);
+      console.error("❌ Vehicle upload error:", error.message);
       res.status(500).json({
         success: false,
         message: "Failed to save vehicle info.",
@@ -91,23 +94,25 @@ router.post(
     }
   }
 );
+
 /**
- * 🔍 Database Connection Test
- * Endpoint: GET /api/driver/db-test
+ * 🔍 Supabase Connection Test
+ * @route GET /api/drivers/db-test
  */
-router.get("/db-test", async (req, res) => {
+router.get("/db-test", async (_req, res) => {
   try {
-    const result = await pool.query("SELECT NOW() AS current_time");
+    const { data, error } = await supabase.from("drivers").select("id").limit(1);
+    if (error) throw error;
     res.status(200).json({
       success: true,
-      message: "Database connection successful 🎉",
-      time: result.rows[0].current_time,
+      message: "Supabase connection successful 🎉",
+      testRow: data?.[0] ?? null,
     });
   } catch (error) {
-    console.error("❌ Database test failed:", error);
+    console.error("❌ Supabase test failed:", error.message);
     res.status(500).json({
       success: false,
-      message: "Database connection failed ❌",
+      message: "Supabase connection failed ❌",
       error: error.message,
     });
   }
