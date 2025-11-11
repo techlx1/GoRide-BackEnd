@@ -17,7 +17,22 @@ export const registerUser = async (req, res) => {
         .json({ success: false, message: "All fields are required" });
     }
 
+    // 🧩 Check for duplicate email or phone
+    const existing = await pool.query(
+      "SELECT * FROM public.profiles WHERE email = $1 OR phone = $2",
+      [email, phone]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "User already exists with this email or phone number",
+      });
+    }
+
+    // 🔒 Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 🧠 Insert new user
     const result = await pool.query(
       `INSERT INTO public.profiles (full_name, email, phone, password, user_type)
        VALUES ($1, $2, $3, $4, $5)
@@ -25,8 +40,9 @@ export const registerUser = async (req, res) => {
       [full_name, email, phone, hashedPassword, user_type || "rider"]
     );
 
-    // Create token right after registration
     const user = result.rows[0];
+
+    // 🎫 Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, user_type: user.user_type },
       process.env.JWT_SECRET,
@@ -40,8 +56,8 @@ export const registerUser = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error("Registration Error:", error);
-    res.status(500).json({
+    console.error("❌ Registration Error:", error);
+    return res.status(500).json({
       success: false,
       message: `Server error during registration: ${error.message}`,
     });
@@ -62,7 +78,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // 🧠 Fetch user
+    // 🔍 Find user
     const userQuery = await pool.query(
       "SELECT * FROM public.profiles WHERE email = $1 OR phone = $2",
       [email, phone]
@@ -81,7 +97,7 @@ export const loginUser = async (req, res) => {
         .json({ success: false, message: "Invalid password" });
     }
 
-    // 🧾 Generate JWT token
+    // 🎫 Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, user_type: user.user_type },
       process.env.JWT_SECRET,
@@ -102,8 +118,8 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({
+    console.error("❌ Login Error:", error);
+    return res.status(500).json({
       success: false,
       message: `Login failed: ${error.message}`,
     });
@@ -111,7 +127,7 @@ export const loginUser = async (req, res) => {
 };
 
 /**
- * 🔑 Request password reset (mock)
+ * 🔑 Request password reset (mock for now)
  */
 export const requestPasswordReset = async (req, res) => {
   try {
@@ -123,8 +139,9 @@ export const requestPasswordReset = async (req, res) => {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000);
-    console.log("OTP generated:", otp);
+    console.log("🔢 OTP generated:", otp);
 
+    // TODO: Send OTP via email or SMS service (Twilio/Mailgun)
     return res
       .status(200)
       .json({ success: true, message: "OTP sent successfully", otp });
@@ -136,7 +153,7 @@ export const requestPasswordReset = async (req, res) => {
 };
 
 /**
- * ✅ Verify OTP and reset password (mock)
+ * ✅ Verify OTP and reset password (mock for now)
  */
 export const verifyPasswordReset = async (req, res) => {
   try {
@@ -148,8 +165,9 @@ export const verifyPasswordReset = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log("Password reset for:", email || phone);
+    console.log("🔐 Password reset for:", email || phone);
 
+    // TODO: Save hashed password to DB (when real OTP validation is implemented)
     return res
       .status(200)
       .json({ success: true, message: "Password reset successfully (mock)" });
