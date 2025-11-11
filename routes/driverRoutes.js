@@ -5,7 +5,7 @@ import {
   getDriverVehicle,
   getDriverDocuments,
   getDriverOverview,
-  getDriverEarnings,
+  // getDriverEarnings, ❌ remove this — it's merged into getDriverProfile
 } from "../controllers/driverController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
@@ -14,10 +14,9 @@ const router = express.Router();
 /**
  * 👤 DRIVER PROFILE
  * GET /api/driver/profile
- * Returns driver profile info (name, email, phone, etc.)
+ * Returns driver profile + vehicle + documents + stats + earnings
  */
 router.get("/profile", verifyToken, getDriverProfile);
-
 
 /**
  * 🚗 VEHICLE INFO
@@ -40,11 +39,6 @@ router.get("/documents", verifyToken, getDriverDocuments);
  */
 router.get("/overview", verifyToken, getDriverOverview);
 
-/**
- * 💰 EARNINGS
- * GET /api/driver/earnings
- * Returns daily, weekly, monthly, and total earnings
- */
-router.get("/earnings", verifyToken, getDriverEarnings);
+// 💰 getDriverEarnings removed — handled inside getDriverProfile ✅
 
 export default router;
