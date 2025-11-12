@@ -4,8 +4,8 @@ import {
   getDriverProfile,
   getDriverVehicle,
   getDriverDocuments,
-  getDriverOverview,
-  // getDriverEarnings, ❌ remove this — it's merged into getDriverProfile
+  getDriverEarnings,
+  getDriverOverview, // ✅ kept for backward compatibility
 } from "../controllers/driverController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
@@ -17,6 +17,13 @@ const router = express.Router();
  * Returns driver profile + vehicle + documents + stats + earnings
  */
 router.get("/profile", verifyToken, getDriverProfile);
+
+/**
+ * 📊 DRIVER OVERVIEW (alias)
+ * GET /api/driver/overview
+ * Returns same data as /profile for older app versions
+ */
+router.get("/overview", verifyToken, getDriverOverview);
 
 /**
  * 🚗 VEHICLE INFO
@@ -33,12 +40,10 @@ router.get("/vehicle", verifyToken, getDriverVehicle);
 router.get("/documents", verifyToken, getDriverDocuments);
 
 /**
- * 📊 OVERVIEW
- * GET /api/driver/overview
- * Returns trips completed, ratings, earnings today, etc.
+ * 💰 EARNINGS
+ * GET /api/driver/earnings
+ * Returns list of all earnings by date
  */
-router.get("/overview", verifyToken, getDriverOverview);
-
-// 💰 getDriverEarnings removed — handled inside getDriverProfile ✅
+router.get("/earnings", verifyToken, getDriverEarnings);
 
 export default router;

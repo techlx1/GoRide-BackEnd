@@ -56,8 +56,7 @@ export const getDriverProfile = async (req, res) => {
     const averageRating =
       ratingData?.length > 0
         ? (
-            ratingData.reduce((sum, r) => sum + r.rating, 0) /
-            ratingData.length
+            ratingData.reduce((sum, r) => sum + r.rating, 0) / ratingData.length
           ).toFixed(1)
         : 0;
 
@@ -130,7 +129,7 @@ export const getDriverProfile = async (req, res) => {
 };
 
 /* ============================================================
-   🚘 2. (Optional) Separate endpoints below remain for future use
+   🚘 2. Separate endpoints for vehicle and documents
    ============================================================ */
 export const getDriverVehicle = async (req, res) => {
   try {
@@ -167,6 +166,36 @@ export const getDriverDocuments = async (req, res) => {
     res.json({ success: true, documents: data || [] });
   } catch (err) {
     console.error("❌ getDriverDocuments Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ============================================================
+   🧩 3. Alias for backward compatibility (optional)
+   ============================================================ */
+export const getDriverOverview = async (req, res) => {
+  // Reuse the same logic for the overview
+  return getDriverProfile(req, res);
+};
+
+/* ============================================================
+   💰 4. Placeholder for future earnings endpoint
+   ============================================================ */
+export const getDriverEarnings = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { data, error } = await supabase
+      .from("earnings")
+      .select("amount, date, ride_id")
+      .eq("driver_id", userId);
+    if (error) throw error;
+
+    res.json({ success: true, earnings: data || [] });
+  } catch (err) {
+    console.error("❌ getDriverEarnings Error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
