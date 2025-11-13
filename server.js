@@ -4,6 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
+import debugRoutes from "./routes/debugRoutes.js";
+
 
 dotenv.config();
 const app = express();
@@ -32,6 +34,8 @@ app.use("/api/driver-status", driverStatusRoutes);
 app.use("/api/driver", driverRoutes);
 app.use("/api/driver/overview", driverOverviewRoutes);
 app.use("/api/driver/earnings", driverEarningsRoutes);
+app.use("/api/debug", debugRoutes);
+
 
 // 🩵 Root Route
 app.get("/", (req, res) => {
