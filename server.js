@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
 import debugRoutes from "./routes/debugRoutes.js";
+import profileRoutes from "./routes/profile.js";
+
 
 
 dotenv.config();
