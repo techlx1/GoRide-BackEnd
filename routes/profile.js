@@ -1,3 +1,10 @@
+import express from "express";
+import jwt from "jsonwebtoken";
+import supabase from "../config/supabaseClient.js";
+
+const router = express.Router();
+
+// GET /api/profile/profile
 router.get("/profile", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -49,4 +56,5 @@ router.get("/profile", async (req, res) => {
     });
   }
 });
+
 export default router;
