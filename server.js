@@ -4,12 +4,19 @@ import cors from "cors";
 import dotenv from "dotenv";
 import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
-import debugRoutes from "./routes/debugRoutes.js";
+
+// Route Imports (ONLY imported once)
+import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profile.js";
-
-
+import ridesRoutes from "./routes/rides.js";
+import driverStatusRoutes from "./routes/driverStatus.js";
+import driverRoutes from "./routes/driverRoutes.js";
+import driverOverviewRoutes from "./routes/driverOverview.js";
+import driverEarningsRoutes from "./routes/driverEarnings.js";
+import debugRoutes from "./routes/debugRoutes.js";
 
 dotenv.config();
+
 const app = express();
 
 // ✅ Core Middlewares
@@ -20,15 +27,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// 🧩 Routes
-import authRoutes from "./routes/authRoutes.js";   // ✅ fixed filename
-import profileRoutes from "./routes/profile.js";
-import ridesRoutes from "./routes/rides.js";
-import driverStatusRoutes from "./routes/driverStatus.js";
-import driverRoutes from "./routes/driverRoutes.js";
-import driverOverviewRoutes from "./routes/driverOverview.js";
-import driverEarningsRoutes from "./routes/driverEarnings.js";
-
+// 🧩 Routes (mapped cleanly)
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
@@ -37,7 +36,6 @@ app.use("/api/driver", driverRoutes);
 app.use("/api/driver/overview", driverOverviewRoutes);
 app.use("/api/driver/earnings", driverEarningsRoutes);
 app.use("/api/debug", debugRoutes);
-
 
 // 🩵 Root Route
 app.get("/", (req, res) => {
@@ -67,7 +65,7 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
-// 🧭 Debug Routes
+// 🧭 Debug: List all registered routes
 app.get("/api/debug/routes", (req, res) => {
   const routes = [];
   app._router.stack.forEach((middleware) => {
