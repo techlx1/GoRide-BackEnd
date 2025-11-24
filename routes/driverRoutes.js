@@ -1,49 +1,29 @@
-// routes/driverRoutes.js
 import express from "express";
 import {
   getDriverProfile,
   getDriverVehicle,
   getDriverDocuments,
   getDriverEarnings,
-  getDriverOverview, // ✅ kept for backward compatibility
+  getDriverOverview,
 } from "../controllers/driverController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/**
- * 👤 DRIVER PROFILE
- * GET /api/driver/profile
- * Returns driver profile + vehicle + documents + stats + earnings
- */
+// 👤 Driver Profile (Unified)
 router.get("/profile", verifyToken, getDriverProfile);
 
-/**
- * 📊 DRIVER OVERVIEW (alias)
- * GET /api/driver/overview
- * Returns same data as /profile for older app versions
- */
+// 📊 Overview (alias)
 router.get("/overview", verifyToken, getDriverOverview);
 
-/**
- * 🚗 VEHICLE INFO
- * GET /api/driver/vehicle
- * Returns driver's vehicle details (model, plate, year)
- */
+// 🚗 Vehicle Info
 router.get("/vehicle", verifyToken, getDriverVehicle);
 
-/**
- * 📄 DOCUMENT STATUS
- * GET /api/driver/documents
- * Returns driver's uploaded/verified document info
- */
+// 📄 Documents
 router.get("/documents", verifyToken, getDriverDocuments);
 
-/**
- * 💰 EARNINGS
- * GET /api/driver/earnings
- * Returns list of all earnings by date
- */
+// 💰 Earnings
 router.get("/earnings", verifyToken, getDriverEarnings);
+
 
 export default router;
