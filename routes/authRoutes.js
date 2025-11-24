@@ -4,7 +4,7 @@ import {
   loginUser,
   requestPasswordReset,
   verifyPasswordReset,
-} from "../controllers/authController.js";
+} from "GoRide-BackEnd/controllers/authController.js";
 
 const router = express.Router();
 
