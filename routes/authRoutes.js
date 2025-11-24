@@ -1,39 +1,89 @@
-import express from "express";
-import {
-  registerUser,
-  loginUser,
-  requestPasswordReset,
-  verifyPasswordReset,
-} from "../controllers/authController.js";
+// FILE: FULLY FIXED loginUser CONTROLLER (copy/paste this)
 
-const router = express.Router();
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import pool from "../config/db.js";
 
 /**
- * 📝 REGISTER
- * Endpoint: POST /api/auth/register
- * Body: { full_name, email, phone, password, user_type }
+ * 🔐 Login with email or phone
+ * Fully Fixed Version – G-Ride Backend
  */
-router.post("/register", registerUser);
+export const loginUser = async (req, res) => {
+  try {
+    const { email, phone, password } = req.body;
 
-/**
- * 🔐 LOGIN
- * Endpoint: POST /api/auth/login
- * Body: { email or phone, password }
- */
-router.post("/login", loginUser);
+    if ((!email && !phone) || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email or phone and password are required",
+      });
+    }
 
-/**
- * 🔑 REQUEST PASSWORD RESET (OTP)
- * Endpoint: POST /api/auth/request-reset
- * Body: { email or phone }
- */
-router.post("/request-reset", requestPasswordReset);
+    let userQuery;
 
-/**
- * ✅ VERIFY OTP + RESET PASSWORD
- * Endpoint: POST /api/auth/verify-reset
- * Body: { email or phone, otp, newPassword }
- */
-router.post("/verify-reset", verifyPasswordReset);
+    // 🔍 Search by email
+    if (email) {
+      userQuery = await pool.query(
+        "SELECT * FROM public.profiles WHERE email = $1 LIMIT 1",
+        [email.trim().toLowerCase()]
+      );
+    }
 
-export default router;
+    // 🔍 Search by phone
+    if (!email && phone) {
+      userQuery = await pool.query(
+        "SELECT * FROM public.profiles WHERE phone = $1 LIMIT 1",
+        [phone.trim()]
+      );
+    }
+
+    const user = userQuery?.rows[0];
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 🔑 Validate password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
+    }
+
+    // 🎫 Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        user_type: user.user_type,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // 🎉 Success response
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        user_type: user.user_type,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Login Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Login failed: ${error.message}`,
+    });
+  }
+};

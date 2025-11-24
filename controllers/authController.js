@@ -65,7 +65,7 @@ export const registerUser = async (req, res) => {
 };
 
 /**
- * 🔐 Login with email or phone
+ * 🔐 Login with email or phone (Fully Fixed)
  */
 export const loginUser = async (req, res) => {
   try {
@@ -78,33 +78,49 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // 🔍 Find user
-    const userQuery = await pool.query(
-      "SELECT * FROM public.profiles WHERE email = $1 OR phone = $2",
-      [email, phone]
-    );
+    let userQuery;
 
-    const user = userQuery.rows[0];
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    // Search by email
+    if (email) {
+      userQuery = await pool.query(
+        "SELECT * FROM public.profiles WHERE email = $1 LIMIT 1",
+        [email.trim().toLowerCase()]
+      );
     }
 
-    // 🔑 Validate password
+    // Search by phone
+    if (!email && phone) {
+      userQuery = await pool.query(
+        "SELECT * FROM public.profiles WHERE phone = $1 LIMIT 1",
+        [phone.trim()]
+      );
+    }
+
+    const user = userQuery?.rows[0];
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Validate password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid password" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
     }
 
-    // 🎫 Generate JWT token
+    // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, user_type: user.user_type },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // ✅ Return token + user data
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -141,7 +157,6 @@ export const requestPasswordReset = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
     console.log("🔢 OTP generated:", otp);
 
-    // TODO: Send OTP via email or SMS service (Twilio/Mailgun)
     return res
       .status(200)
       .json({ success: true, message: "OTP sent successfully", otp });
@@ -167,7 +182,6 @@ export const verifyPasswordReset = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     console.log("🔐 Password reset for:", email || phone);
 
-    // TODO: Save hashed password to DB (when real OTP validation is implemented)
     return res
       .status(200)
       .json({ success: true, message: "Password reset successfully (mock)" });
@@ -177,3 +191,4 @@ export const verifyPasswordReset = async (req, res) => {
       .json({ success: false, message: "Failed to reset password" });
   }
 };
+export default router;
