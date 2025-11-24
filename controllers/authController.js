@@ -168,7 +168,7 @@ export const requestPasswordReset = async (req, res) => {
 };
 
 /**
- * ✅ Verify OTP and reset password (mock for now)
+ * ✅ Verify OTP and reset password (mock for now yes)
  */
 export const verifyPasswordReset = async (req, res) => {
   try {
