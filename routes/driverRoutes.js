@@ -1,29 +1,39 @@
 import express from "express";
 import {
   getDriverProfile,
+  getDriverOverview,
   getDriverVehicle,
   getDriverDocuments,
   getDriverEarnings,
-  getDriverOverview,
 } from "../controllers/driverController.js";
+
+import { updateVehicleDetails } from "../controllers/vehicleController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 👤 Driver Profile (Unified)
+/* ============================================================
+   DRIVER PROFILE / OVERVIEW
+============================================================ */
 router.get("/profile", verifyToken, getDriverProfile);
-
-// 📊 Overview (alias)
 router.get("/overview", verifyToken, getDriverOverview);
 
-// 🚗 Vehicle Info
+/* ============================================================
+   VEHICLE
+============================================================ */
 router.get("/vehicle", verifyToken, getDriverVehicle);
 
-// 📄 Documents
+// 🟢 Create or update vehicle (multipart/form-data)
+router.post("/vehicle/update", verifyToken, updateVehicleDetails);
+
+/* ============================================================
+   DOCUMENTS
+============================================================ */
 router.get("/documents", verifyToken, getDriverDocuments);
 
-// 💰 Earnings
+/* ============================================================
+   EARNINGS
+============================================================ */
 router.get("/earnings", verifyToken, getDriverEarnings);
-
 
 export default router;

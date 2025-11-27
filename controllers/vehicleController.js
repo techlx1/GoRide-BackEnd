@@ -1,45 +1,119 @@
-export const uploadVehiclePhoto = async (req, res) => {
+import { supabase } from "../config/supabaseClient.js";
+
+export const updateVehicleDetails = async (req, res) => {
   try {
-    if (!req.files || !req.files.vehicle_photo) {
+    const profileId = req.user.id; // UUID from token
+
+    const {
+      vehicle_model,
+      license_plate,
+      vehicle_year,
+      vehicle_color,
+      vehicle_seats,
+    } = req.body;
+
+    if (!vehicle_model || !license_plate || !vehicle_year || !vehicle_color || !vehicle_seats) {
       return res.status(400).json({
         success: false,
-        message: "No image provided",
+        message: "All fields are required",
       });
     }
 
-    const photo = req.files.vehicle_photo;
-    const ext = photo.name.split(".").pop();
-    const fileName = `vehicles/${req.user.id}_${Date.now()}.${ext}`;
+    // --------------------------
+    // 🔵 Upload Vehicle Photo
+    // --------------------------
+    let vehiclePhotoUrl = null;
 
-    const { error: uploadError } = await supabase.storage
-      .from("vehicle_photos")
-      .upload(fileName, photo.data, {
-        contentType: photo.mimetype,
-        upsert: true,
-      });
+    if (req.files && req.files.vehicle_photo) {
+      const photo = req.files.vehicle_photo;
+      const ext = photo.name.split(".").pop();
+      const fileName = `vehicles/${profileId}_${Date.now()}.${ext}`;
 
-    if (uploadError) {
-      console.error(uploadError);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to upload vehicle image",
-      });
+      const { error: uploadError } = await supabase.storage
+        .from("vehicle_photos")
+        .upload(fileName, photo.data, {
+          contentType: photo.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error(uploadError);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to upload vehicle image",
+        });
+      }
+
+      vehiclePhotoUrl = supabase.storage
+        .from("vehicle_photos")
+        .getPublicUrl(fileName).data.publicUrl;
     }
 
-    const url = supabase.storage
-      .from("vehicle_photos")
-      .getPublicUrl(fileName).data.publicUrl;
+    // --------------------------
+    // 🔵 Check if vehicle exists
+    // --------------------------
+    const { data: existingVehicle, error: checkError } = await supabase
+      .from("vehicles")
+      .select("*")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    // --------------------------
+    // 🔵 Payload
+    // --------------------------
+    const payload = {
+      vehicle_model,
+      license_plate,
+      vehicle_year,
+      vehicle_color,
+      vehicle_seats: Number(vehicle_seats),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (vehiclePhotoUrl) {
+      payload.vehicle_photo = vehiclePhotoUrl;
+    }
+
+    let result, error;
+
+    if (existingVehicle) {
+      // 🔵 UPDATE
+      ({ data: result, error } = await supabase
+        .from("vehicles")
+        .update(payload)
+        .eq("profile_id", profileId)
+        .select()
+        .maybeSingle());
+    } else {
+      // 🟢 INSERT (CREATE)
+      ({ data: result, error } = await supabase
+        .from("vehicles")
+        .insert([
+          {
+            profile_id: profileId,
+            created_at: new Date().toISOString(),
+            ...payload,
+          },
+        ])
+        .select()
+        .maybeSingle());
+    }
+
+    if (error) throw error;
 
     return res.json({
       success: true,
-      url,
+      message: existingVehicle ? "Vehicle updated successfully" : "Vehicle created successfully",
+      vehicle: result,
     });
 
-  } catch (err) {
-    console.error("Upload Error:", err);
+  } catch (error) {
+    console.error("Vehicle Update Error:", error);
     return res.status(500).json({
       success: false,
-      message: err.message || "Server error",
+      message: error.message || "Server error",
     });
   }
 };
