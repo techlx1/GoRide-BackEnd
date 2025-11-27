@@ -1,66 +1,29 @@
-import supabase from "../config/supabaseClient.js";
+import db from "../config/db.js";
 
-
-// 🟢 Update driver coordinates
-export const updateDriverLocation = async (req, res) => {
+export const updateDriverStatus = async (req, res) => {
   try {
-    const driverId = req.user.id;
-    const { latitude, longitude } = req.body;
+    const profileId = req.user.id;
+    const { is_online, current_lat, current_lng, is_on_trip } = req.body;
 
-    const { data, error } = await supabase
-      .from("driver_status")
-      .upsert(
-        {
-          driver_id: driverId,
-          current_latitude: latitude,
-          current_longitude: longitude,
-          last_updated: new Date(),
-        },
-        { onConflict: "driver_id" }
-      );
+    const result = await db.query(
+      `
+      INSERT INTO driver_status (profile_id, is_online, current_lat, current_lng, is_on_trip)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (profile_id) DO UPDATE SET
+        is_online = EXCLUDED.is_online,
+        current_lat = EXCLUDED.current_lat,
+        current_lng = EXCLUDED.current_lng,
+        is_on_trip = EXCLUDED.is_on_trip,
+        last_active = NOW()
+      RETURNING *;
+      `,
+      [profileId, is_online, current_lat, current_lng, is_on_trip]
+    );
 
-    if (error) throw error;
-    res.json({ success: true, message: "Driver location updated", data });
+    res.json({ success: true, status: result.rows[0] });
+
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-// 🟣 Set driver online/offline
-export const setOnlineStatus = async (req, res) => {
-  try {
-    const driverId = req.user.id;
-    const { is_online } = req.body;
-
-    const { data, error } = await supabase
-      .from("driver_status")
-      .upsert(
-        {
-          driver_id: driverId,
-          is_online,
-          last_updated: new Date(),
-        },
-        { onConflict: "driver_id" }
-      );
-
-    if (error) throw error;
-    res.json({ success: true, message: "Driver status updated", data });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-// 🔵 Get all currently online drivers
-export const getOnlineDrivers = async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("driver_status")
-      .select("driver_id, current_latitude, current_longitude, last_updated")
-      .eq("is_online", true);
-
-    if (error) throw error;
-    res.json({ success: true, data });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
