@@ -1,82 +1,27 @@
-import db from "../config/db.js";
-import { supabase } from "../config/supabaseClient.js";
+import express from "express";
+import { verifyToken } from "../middleware/authMiddleware.js";
+import { updateVehicleDetails, uploadVehiclePhoto } from "../controllers/vehicleController.js";
 
-export const updateVehicleDetails = async (req, res) => {
-  try {
-    const profileId = req.user.id; // UUID
+const router = express.Router();
 
-    const {
-      vehicle_model,
-      license_plate,
-      vehicle_year,
-      vehicle_color,
-      vehicle_seats
-    } = req.body;
+// Upload image
+router.post("/upload-photo", verifyToken, uploadVehiclePhoto);
 
-    if (!vehicle_model || !license_plate || !vehicle_year || !vehicle_color || !vehicle_seats) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
-    }
+// Create/update vehicle
+router.post("/upsert", verifyToken, updateVehicleDetails);
 
-    // Upload vehicle photo if exists
-    let vehiclePhotoUrl = null;
+// Get vehicle
+router.get("/me", verifyToken, async (req, res) => {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("profile_id", req.user.id)
+    .maybeSingle();
 
-    if (req.files && req.files.vehicle_photo) {
-      const photo = req.files.vehicle_photo;
-      const ext = photo.name.split(".").pop();
-      const filename = `vehicles/${profileId}_${Date.now()}.${ext}`;
+  return res.json({
+    success: true,
+    vehicle: data,
+  });
+});
 
-      const { data, error } = await supabase.storage
-        .from("vehicle_photos")
-        .upload(filename, photo.data, {
-          contentType: photo.mimetype
-        });
-
-      if (error) {
-        console.log(error);
-        return res.status(500).json({ success: false, message: "Image upload failed" });
-      }
-
-      vehiclePhotoUrl = supabase.storage
-        .from("vehicle_photos")
-        .getPublicUrl(filename).data.publicUrl;
-    }
-
-    const result = await db.query(
-      `
-      INSERT INTO vehicles (
-        profile_id, vehicle_model, license_plate, vehicle_year,
-        vehicle_color, vehicle_seats, vehicle_photo
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (profile_id) DO UPDATE SET
-        vehicle_model = EXCLUDED.vehicle_model,
-        license_plate = EXCLUDED.license_plate,
-        vehicle_year = EXCLUDED.vehicle_year,
-        vehicle_color = EXCLUDED.vehicle_color,
-        vehicle_seats = EXCLUDED.vehicle_seats,
-        vehicle_photo = COALESCE(EXCLUDED.vehicle_photo, vehicles.vehicle_photo),
-        updated_at = NOW()
-      RETURNING *;
-      `,
-      [
-        profileId,
-        vehicle_model,
-        license_plate,
-        vehicle_year,
-        vehicle_color,
-        vehicle_seats,
-        vehiclePhotoUrl
-      ]
-    );
-
-    return res.json({
-      success: true,
-      message: "Vehicle updated successfully",
-      vehicle: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error("Vehicle Update Error:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
+export default router;
