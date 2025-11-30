@@ -2,10 +2,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fileUpload from "express-fileupload";   // ⭐ ADDED
 import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
 
-// Route Imports (ONLY imported once)
+// Route Imports
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
@@ -19,15 +20,34 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Core Middlewares
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-app.use(express.json());
+// ======================================================
+// 🔧 Base Middlewares
+// ======================================================
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-// 🧩 Routes (mapped cleanly)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ======================================================
+// ⭐ IMPORTANT: File Upload Middleware (Fixes Your Error)
+// ======================================================
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "./tmp",
+    createParentPath: true,
+  })
+);
+
+// ======================================================
+// 🧩 API Routes
+// ======================================================
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
@@ -37,7 +57,9 @@ app.use("/api/driver/overview", driverOverviewRoutes);
 app.use("/api/driver/earnings", driverEarningsRoutes);
 app.use("/api/debug", debugRoutes);
 
+// ======================================================
 // 🩵 Root Route
+// ======================================================
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -46,7 +68,9 @@ app.get("/", (req, res) => {
   });
 });
 
-// 🧠 Quick Database Connection Test
+// ======================================================
+// 🧠 Quick Database Test
+// ======================================================
 app.get("/api/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
@@ -65,7 +89,9 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
-// 🧭 Debug: List all registered routes
+// ======================================================
+// 🧭 Debug Route — List All Registered Routes
+// ======================================================
 app.get("/api/debug/routes", (req, res) => {
   const routes = [];
   app._router.stack.forEach((middleware) => {
@@ -89,7 +115,9 @@ app.get("/api/debug/routes", (req, res) => {
   res.json({ success: true, totalRoutes: routes.length, routes });
 });
 
+// ======================================================
 // 🖥️ Start Server
+// ======================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 G-Ride Backend running on port ${PORT}`);
