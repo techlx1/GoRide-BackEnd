@@ -56,6 +56,7 @@ app.use("/api/driver", driverRoutes);
 app.use("/api/driver/overview", driverOverviewRoutes);
 app.use("/api/driver/earnings", driverEarningsRoutes);
 app.use("/api/debug", debugRoutes);
+app.use("/api/app", appRoutes);
 
 // ======================================================
 // 🩵 Root Route

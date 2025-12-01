@@ -63,4 +63,11 @@ router.post("/wallet/send", verifyToken, sendMoney);
 // Receive Info (Wallet Address + QR payload)
 router.get("/wallet/receive", verifyToken, getReceiveInfo);
 
+/* ============================================================
+   Account Delete
+============================================================ */
+
+router.post("/account/delete", verifyToken, deleteDriverAccount);
+
+
 export default router;
