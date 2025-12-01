@@ -1,4 +1,5 @@
-import supabase from "../config/supabaseClient.js";
+import { supabase } from "../config/supabaseClient.js";
+
 
 /*
 ==============================================================
