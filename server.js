@@ -15,6 +15,7 @@ import driverRoutes from "./routes/driverRoutes.js";
 import driverOverviewRoutes from "./routes/driverOverview.js";
 import driverEarningsRoutes from "./routes/driverEarnings.js";
 import debugRoutes from "./routes/debugRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 dotenv.config();
 
@@ -57,6 +58,10 @@ app.use("/api/driver/overview", driverOverviewRoutes);
 app.use("/api/driver/earnings", driverEarningsRoutes);
 app.use("/api/debug", debugRoutes);
 app.use("/api/app", appRoutes);
+app.use("/api/documents", documentRoutes);
+
+// serve uploaded images
+app.use("/uploads", express.static("uploads"));
 
 // ======================================================
 // 🩵 Root Route

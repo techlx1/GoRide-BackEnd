@@ -1,6 +1,5 @@
 import { supabase } from "../config/supabaseClient.js";
 
-
 /*
 ==============================================================
   DRIVER PROFILE – Unified Response
@@ -14,7 +13,7 @@ export const getDriverProfile = async (req, res) => {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, full_name, email, phone, user_type, created_at")
+      .select("id, full_name, email, phone, user_type, created_at, gender, date_of_birth")
       .eq("id", userId)
       .single();
 
@@ -28,7 +27,7 @@ export const getDriverProfile = async (req, res) => {
 
     const { data: documents } = await supabase
       .from("driver_documents")
-      .select("type, status, uploaded_at")
+      .select("doc_type, status, uploaded_at, file_url")
       .eq("driver_id", userId);
 
     const { count: totalTrips } = await supabase
@@ -80,9 +79,7 @@ export const getDriverProfile = async (req, res) => {
       .select("amount, date")
       .eq("driver_id", userId);
 
-    let total = 0,
-      weekSum = 0,
-      monthSum = 0;
+    let total = 0, weekSum = 0, monthSum = 0;
     const todayDate = new Date();
     const weekStart = new Date(todayDate);
     weekStart.setDate(todayDate.getDate() - 7);
@@ -171,6 +168,63 @@ export const getDriverDocuments = async (req, res) => {
     res.json({ success: true, documents: data || [] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/*
+==============================================================
+  UPDATE DRIVER PROFILE  ⭐ NEW ⭐
+==============================================================
+*/
+export const updateDriverProfile = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const {
+      full_name,
+      phone,
+      email,
+      gender,
+      date_of_birth
+    } = req.body;
+
+    const payload = {
+      full_name,
+      phone,
+      email,
+      gender,
+      date_of_birth,
+      updated_at: new Date(),
+    };
+
+    // Remove null/undefined values
+    Object.keys(payload).forEach((key) => {
+      if (!payload[key]) delete payload[key];
+    });
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully.",
+      profile: data
+    });
+  } catch (err) {
+    console.error("❌ updateDriverProfile Error:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
+      error: err.message,
+    });
   }
 };
 
