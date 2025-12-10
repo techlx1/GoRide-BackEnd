@@ -24,7 +24,7 @@ import {
 
 // Missing imports FIXED
 import { deleteDriverAccount } from "../controllers/accountController.js";
-import { submitAppSuggestion } from "../controllers/settingsController.js";
+
 import {
   submitSuggestion,
   updateSettings,
@@ -89,15 +89,17 @@ router.post("/account/delete", verifyToken, deleteDriverAccount);
 /* ============================================================
    Application feedback
 ============================================================ */
-router.post("/app/suggestions", verifyToken, submitAppSuggestion);
+router.post("/suggestions", verifyToken, submitSuggestion);
+
+router.put("/settings", verifyToken, updateSettings);
+router.put("/settings/notifications", verifyToken, updateNotificationSettings);
+
 
 /* ============================================================
    Invite a friend
 ============================================================ */
 router.get("/invite", verifyToken, getReferralInfo);
 
-router.post("/suggestions", submitSuggestion);
-router.put("/settings", updateSettings);
-router.put("/settings/notifications", updateNotificationSettings);
+
 
 export default router;
