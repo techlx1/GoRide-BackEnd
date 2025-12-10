@@ -25,6 +25,14 @@ import {
 // Missing imports FIXED
 import { deleteDriverAccount } from "../controllers/accountController.js";
 import { submitAppSuggestion } from "../controllers/settingsController.js";
+import {
+  submitSuggestion,
+  updateSettings,
+  updateNotificationSettings
+} from "../controllers/settingsController.js";
+
+
+
 
 const router = express.Router();
 
@@ -87,5 +95,9 @@ router.post("/app/suggestions", verifyToken, submitAppSuggestion);
    Invite a friend
 ============================================================ */
 router.get("/invite", verifyToken, getReferralInfo);
+
+router.post("/suggestions", submitSuggestion);
+router.put("/settings", updateSettings);
+router.put("/settings/notifications", updateNotificationSettings);
 
 export default router;
