@@ -16,6 +16,7 @@ import driverOverviewRoutes from "./routes/driverOverview.js";
 import driverEarningsRoutes from "./routes/driverEarnings.js";
 import debugRoutes from "./routes/debugRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import appRoutes from "./routes/appRoutes.js";
 
 dotenv.config();
 
