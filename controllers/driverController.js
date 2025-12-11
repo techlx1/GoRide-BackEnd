@@ -322,3 +322,64 @@ export const getDriverEarnings = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+/*
+==============================================================
+  EARNINGS SUMMARY  ⭐ NEW ⭐
+==============================================================
+*/
+export const getEarningsSummary = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 7);
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Fetch all earnings for driver
+    const { data: earningsData, error } = await supabase
+      .from("earnings")
+      .select("amount, date")
+      .eq("driver_id", userId);
+
+    if (error) throw error;
+
+    let todaySum = 0,
+        weekSum = 0,
+        monthSum = 0,
+        total = 0;
+
+    earningsData?.forEach((entry) => {
+      const amount = entry.amount || 0;
+      const entryDate = new Date(entry.date);
+
+      total += amount;
+
+      if (entry.date === today) todaySum += amount;
+      if (entryDate >= weekStart) weekSum += amount;
+      if (entryDate >= monthStart) monthSum += amount;
+    });
+
+    return res.json({
+      success: true,
+      earningsSummary: {
+        today: todaySum,
+        week: weekSum,
+        month: monthSum,
+        total,
+      },
+    });
+  } catch (err) {
+    console.error("❌ getEarningsSummary Error:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch earnings summary",
+      error: err.message,
+    });
+  }
+};
