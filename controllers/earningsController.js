@@ -1,6 +1,7 @@
 // controllers/earningsController.js
 import { supabase } from "../config/supabaseClient.js";
 
+
 /**
  * 💰 Get earnings summary for a specific driver
  * Route: GET /api/driver/earnings/:driverId

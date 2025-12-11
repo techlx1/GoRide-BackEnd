@@ -6,7 +6,7 @@ import {
   getDriverOverview,
   getDriverVehicle,
   getDriverDocuments,
-  getDriverEarnings,
+  getEarningsSummary,
   updateDriverProfile,   // ✅ NEW
 } from "../controllers/driverController.js";
 
@@ -60,7 +60,7 @@ router.get("/documents", verifyToken, getDriverDocuments);
 /* ============================================================
    EARNINGS
 ============================================================ */
-router.get("/earnings", verifyToken, getDriverEarnings);
+router.get("/earnings/:driverId", verifyToken, getEarningsSummary);
 
 /* ============================================================
    WALLET (FULL MODULE)

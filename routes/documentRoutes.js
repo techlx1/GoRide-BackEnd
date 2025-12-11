@@ -9,7 +9,9 @@ import {
 
 const router = express.Router();
 
-// Driver uploads a document
+/* ============================================================
+   DRIVER UPLOAD DOCUMENT
+============================================================ */
 router.post(
   "/upload",
   verifyToken,
@@ -17,10 +19,18 @@ router.post(
   uploadDocument
 );
 
-// Driver gets all documents
+/* ============================================================
+   DRIVER – GET THEIR OWN DOCUMENTS
+============================================================ */
 router.get("/me", verifyToken, getMyDocuments);
 
-// Admin updates document status
-router.patch("/:id/status", updateDocumentStatus);
+/* ============================================================
+   ADMIN – UPDATE VERIFICATION STATUS (APPROVE / REJECT)
+============================================================ */
+router.patch(
+  "/:id/status",
+  verifyToken,
+  updateDocumentStatus
+);
 
 export default router;

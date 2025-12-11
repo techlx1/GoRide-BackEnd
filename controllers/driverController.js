@@ -1,5 +1,80 @@
 import { supabase } from "../config/supabaseClient.js";
 
+
+// DRIVER OVERVIEW (Dashboard Summary)
+export const getDriverOverview = async (req, res) => {
+  try {
+    const driverId = req.user.id; // token-secure
+
+    /* --- 1. DRIVER INFO --- */
+    const driverResult = await pool.query(
+      `SELECT id, full_name, email, phone, user_type, created_at
+       FROM profiles 
+       WHERE id = $1 AND user_type = 'driver'`,
+      [driverId]
+    );
+
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found",
+      });
+    }
+
+    const driver = driverResult.rows[0];
+
+    /* --- 2. VEHICLE INFO --- */
+    const vehicleResult = await pool.query(
+      `SELECT make, model, year, license_plate, fuel_level, mileage, status
+       FROM vehicles WHERE driver_id = $1`,
+      [driverId]
+    );
+
+    const vehicle = vehicleResult.rows[0] || {};
+
+    /* --- 3. STATS --- */
+    const [statsResult, todayResult] = await Promise.all([
+      pool.query(
+        `SELECT 
+          COUNT(*) AS total_trips,
+          COALESCE(SUM(fare_amount),0) AS total_earnings,
+          COALESCE(AVG(rating),0) AS avg_rating
+         FROM rides WHERE driver_id = $1`,
+        [driverId]
+      ),
+      pool.query(
+        `SELECT 
+          COUNT(*) AS today_trips,
+          COALESCE(SUM(fare_amount),0) AS today_earnings
+         FROM rides
+         WHERE driver_id = $1 AND DATE(start_time)=CURRENT_DATE`,
+        [driverId]
+      ),
+    ]);
+
+    const stats = {
+      totalTrips: Number(statsResult.rows[0].total_trips || 0),
+      totalEarnings: Number(statsResult.rows[0].total_earnings || 0),
+      averageRating: Number(statsResult.rows[0].avg_rating || 0).toFixed(1),
+      todayTrips: Number(todayResult.rows[0].today_trips || 0),
+      todayEarnings: Number(todayResult.rows[0].today_earnings || 0),
+    };
+
+    return res.status(200).json({
+      success: true,
+      overview: { driver, vehicle, stats },
+    });
+  } catch (err) {
+    console.error("❌ getDriverOverview error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+
 /*
 ==============================================================
   DRIVER PROFILE – Unified Response

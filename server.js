@@ -10,13 +10,15 @@ import supabase from "./config/supabaseClient.js";
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
-import driverStatusRoutes from "./routes/driverStatus.js";
+//import driverStatusRoutes from "./routes/driverStatus.js";
 import driverRoutes from "./routes/driverRoutes.js";
-import driverOverviewRoutes from "./routes/driverOverview.js";
-import driverEarningsRoutes from "./routes/driverEarnings.js";
+//import driverOverviewRoutes from "./routes/driverOverview.js";
+//import driverEarningsRoutes from "./routes/driverEarnings.js";
 import debugRoutes from "./routes/debugRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import appRoutes from "./routes/appRoutes.js";
+import notificationsRoutes from "./routes/notifications.js";
+
 
 dotenv.config();
 
@@ -53,13 +55,12 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", ridesRoutes);
-app.use("/api/driver-status", driverStatusRoutes);
 app.use("/api/driver", driverRoutes);
-app.use("/api/driver/overview", driverOverviewRoutes);
-app.use("/api/driver/earnings", driverEarningsRoutes);
 app.use("/api/debug", debugRoutes);
 app.use("/api/app", appRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/notifications", notificationsRoutes);
+
 
 // serve uploaded images
 app.use("/uploads", express.static("uploads"));

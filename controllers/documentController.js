@@ -1,111 +1,44 @@
 import pool from "../config/db.js";
 
 /**
- * POST /api/documents/upload
- * Upload a document for a driver
- */
-export const uploadDocument = async (req, res) => {
-  try {
-    const driverId = req.user.id; // Coming from verifyToken
-    const { docType } = req.body;
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({
-        success: false,
-        message: "No file uploaded.",
-      });
-    }
-
-    // Allowed document types
-    const allowedTypes = [
-      "license_front",
-      "license_back",
-      "vehicle_registration"
-    ];
-
-    if (!allowedTypes.includes(docType)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid document type.",
-      });
-    }
-
-    const fileUrl = `/uploads/documents/${file.filename}`;
-
-    // Store in database
-    const result = await pool.query(
-      `
-      INSERT INTO driver_documents (driver_id, doc_type, file_url, status)
-      VALUES ($1, $2, $3, 'pending')
-      RETURNING *
-      `,
-      [driverId, docType, fileUrl]
-    );
-
-    return res.json({
-      success: true,
-      message: "Document uploaded successfully.",
-      document: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Upload Document Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error while uploading document.",
-    });
-  }
-};
-
-/**
- * GET /api/documents/me
- * Get all documents uploaded by the logged-in driver
- */
-export const getMyDocuments = async (req, res) => {
-  try {
-    const driverId = req.user.id;
-
-    const result = await pool.query(
-      `
-      SELECT id, doc_type, file_url, status, uploaded_at, updated_at
-      FROM driver_documents
-      WHERE driver_id = $1
-      ORDER BY uploaded_at DESC
-      `,
-      [driverId]
-    );
-
-    return res.json({
-      success: true,
-      documents: result.rows,
-    });
-  } catch (error) {
-    console.error("Get Documents Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error while fetching documents.",
-    });
-  }
-};
-
-/**
  * PATCH /api/documents/:id/status
- * Admin updates document status (pending/approved/rejected)
+ * Admin updates document status + sends notification
  */
 export const updateDocumentStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
 
+    // 1️⃣ Validate status
     const allowed = ["pending", "approved", "rejected"];
     if (!allowed.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status.",
+        message: "Invalid status value.",
       });
     }
 
-    const result = await pool.query(
+    // 2️⃣ Get document info
+    const docResult = await pool.query(
+      `
+      SELECT driver_id, doc_type 
+      FROM driver_documents
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (docResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found.",
+      });
+    }
+
+    const { driver_id, doc_type } = docResult.rows[0];
+
+    // 3️⃣ Update status
+    const updateResult = await pool.query(
       `
       UPDATE driver_documents
       SET status = $1, updated_at = NOW()
@@ -115,23 +48,45 @@ export const updateDocumentStatus = async (req, res) => {
       [status, id]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Document not found.",
-      });
+    // 4️⃣ Build notification
+    let title = "";
+    let message = "";
+
+    if (status === "approved") {
+      title = "Document Approved";
+      message = `Your ${doc_type.replace("_", " ")} has been approved.`;
+    }
+
+    if (status === "rejected") {
+      title = "Document Rejected";
+      message = reason
+        ? `Your ${doc_type.replace("_", " ")} was rejected. Reason: ${reason}`
+        : `Your ${doc_type.replace("_", " ")} was rejected.`;
+    }
+
+    // 5️⃣ Insert notification only for approved/rejected
+    if (status !== "pending") {
+      await pool.query(
+        `
+        INSERT INTO notifications (user_id, title, message, type)
+        VALUES ($1, $2, $3, 'document')
+        `,
+        [driver_id, title, message]
+      );
     }
 
     return res.json({
       success: true,
       message: "Status updated successfully.",
-      document: result.rows[0],
+      document: updateResult.rows[0],
     });
+
   } catch (error) {
     console.error("Update Status Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while updating status.",
+      message: "Server error while updating document status.",
+      error: error.message,
     });
   }
 };
