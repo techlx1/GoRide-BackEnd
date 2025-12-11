@@ -1,12 +1,14 @@
+import pool from "../config/db.js";
 import { supabase } from "../config/supabaseClient.js";
 
-
-// DRIVER OVERVIEW (Dashboard Summary)
+/* ============================================================================
+   1. DRIVER DASHBOARD OVERVIEW (POSTGRESQL)
+============================================================================ */
 export const getDriverOverview = async (req, res) => {
   try {
-    const driverId = req.user.id; // token-secure
+    const driverId = req.user.id;
 
-    /* --- 1. DRIVER INFO --- */
+    /* --- DRIVER INFO --- */
     const driverResult = await pool.query(
       `SELECT id, full_name, email, phone, user_type, created_at
        FROM profiles 
@@ -23,7 +25,7 @@ export const getDriverOverview = async (req, res) => {
 
     const driver = driverResult.rows[0];
 
-    /* --- 2. VEHICLE INFO --- */
+    /* --- VEHICLE INFO --- */
     const vehicleResult = await pool.query(
       `SELECT make, model, year, license_plate, fuel_level, mileage, status
        FROM vehicles WHERE driver_id = $1`,
@@ -32,7 +34,7 @@ export const getDriverOverview = async (req, res) => {
 
     const vehicle = vehicleResult.rows[0] || {};
 
-    /* --- 3. STATS --- */
+    /* --- TRIP STATS --- */
     const [statsResult, todayResult] = await Promise.all([
       pool.query(
         `SELECT 
@@ -74,43 +76,45 @@ export const getDriverOverview = async (req, res) => {
   }
 };
 
-
-/*
-==============================================================
-  DRIVER PROFILE – Unified Response
-==============================================================
-*/
+/* ============================================================================
+   2. GET DRIVER PROFILE (Supabase)
+============================================================================ */
 export const getDriverProfile = async (req, res) => {
   try {
     const userId = req.user?.id;
-    if (!userId)
-      return res.status(401).json({ success: false, message: "Unauthorized" });
 
+    /* --- Profile Core --- */
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, full_name, email, phone, user_type, created_at, gender, date_of_birth")
+      .select(
+        "id, full_name, email, phone, user_type, created_at, gender, date_of_birth"
+      )
       .eq("id", userId)
       .single();
 
     if (profileError) throw profileError;
 
+    /* --- Vehicle --- */
     const { data: vehicle } = await supabase
       .from("vehicles")
       .select("make, model, year, license_plate, status")
       .eq("driver_id", userId)
       .maybeSingle();
 
+    /* --- Documents --- */
     const { data: documents } = await supabase
       .from("driver_documents")
       .select("doc_type, status, uploaded_at, file_url")
       .eq("driver_id", userId);
 
+    /* --- Completed Trips --- */
     const { count: totalTrips } = await supabase
       .from("rides")
       .select("*", { count: "exact", head: true })
       .eq("driver_id", userId)
       .eq("status", "completed");
 
+    /* --- Today Earnings --- */
     const today = new Date().toISOString().split("T")[0];
 
     const { data: earningsToday } = await supabase
@@ -122,6 +126,7 @@ export const getDriverProfile = async (req, res) => {
     const todayEarnings =
       earningsToday?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
 
+    /* --- Ratings --- */
     const { data: ratingData } = await supabase
       .from("ratings")
       .select("rating")
@@ -135,6 +140,7 @@ export const getDriverProfile = async (req, res) => {
           ).toFixed(1)
         : 0;
 
+    /* --- Hours Worked --- */
     const { data: rideDurations } = await supabase
       .from("rides")
       .select("duration_minutes")
@@ -149,12 +155,16 @@ export const getDriverProfile = async (req, res) => {
 
     const hoursWorked = (totalMinutes / 60).toFixed(1);
 
+    /* --- Earnings Aggregates --- */
     const { data: earningsData } = await supabase
       .from("earnings")
       .select("amount, date")
       .eq("driver_id", userId);
 
-    let total = 0, weekSum = 0, monthSum = 0;
+    let total = 0,
+      weekSum = 0,
+      monthSum = 0;
+
     const todayDate = new Date();
     const weekStart = new Date(todayDate);
     weekStart.setDate(todayDate.getDate() - 7);
@@ -201,11 +211,9 @@ export const getDriverProfile = async (req, res) => {
   }
 };
 
-/*
-==============================================================
-  VEHICLE
-==============================================================
-*/
+/* ============================================================================
+   3. GET VEHICLE
+============================================================================ */
 export const getDriverVehicle = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -224,11 +232,9 @@ export const getDriverVehicle = async (req, res) => {
   }
 };
 
-/*
-==============================================================
-  DOCUMENTS
-==============================================================
-*/
+/* ============================================================================
+   4. DOCUMENTS
+============================================================================ */
 export const getDriverDocuments = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -246,16 +252,12 @@ export const getDriverDocuments = async (req, res) => {
   }
 };
 
-/*
-==============================================================
-  UPDATE DRIVER PROFILE  ⭐ NEW ⭐
-==============================================================
-*/
+/* ============================================================================
+   5. UPDATE DRIVER PROFILE
+============================================================================ */
 export const updateDriverProfile = async (req, res) => {
   try {
     const userId = req.user?.id;
-    if (!userId)
-      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const {
       full_name,
@@ -274,7 +276,6 @@ export const updateDriverProfile = async (req, res) => {
       updated_at: new Date(),
     };
 
-    // Remove null/undefined values
     Object.keys(payload).forEach((key) => {
       if (!payload[key]) delete payload[key];
     });
@@ -294,7 +295,6 @@ export const updateDriverProfile = async (req, res) => {
       profile: data
     });
   } catch (err) {
-    console.error("❌ updateDriverProfile Error:", err.message);
     res.status(500).json({
       success: false,
       message: "Failed to update profile",
@@ -303,13 +303,9 @@ export const updateDriverProfile = async (req, res) => {
   }
 };
 
-export const getDriverOverview = getDriverProfile;
-
-/*
-==============================================================
-  EARNINGS
-==============================================================
-*/
+/* ============================================================================
+   6. DRIVER EARNINGS (simple list)
+============================================================================ */
 export const getDriverEarnings = async (req, res) => {
   try {
     const userId = req.user?.id;
