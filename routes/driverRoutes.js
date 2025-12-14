@@ -1,19 +1,23 @@
 import express from "express";
-import { getReferralInfo } from "../controllers/referralController.js";
+import { verifyToken } from "../middleware/authMiddleware.js";
 
+/* ============================================================
+   CONTROLLERS
+============================================================ */
+
+// Driver
 import {
   getDriverProfile,
   getDriverOverview,
   getDriverVehicle,
   getDriverDocuments,
-  getEarningsSummary,
-  updateDriverProfile,   // ✅ NEW
+  updateDriverProfile,
 } from "../controllers/driverController.js";
 
+// Vehicle
 import { updateVehicleDetails } from "../controllers/vehicleController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
 
-// WALLET MODULE (clean + unified)
+// Wallet
 import {
   getWalletOverview,
   getWalletTransactions,
@@ -22,28 +26,52 @@ import {
   getReceiveInfo,
 } from "../controllers/walletController.js";
 
-// Missing imports FIXED
+// Account
 import { deleteDriverAccount } from "../controllers/accountController.js";
 
+// App / Settings
 import {
   submitSuggestion,
   updateSettings,
-  updateNotificationSettings
+  updateNotificationSettings,
 } from "../controllers/settingsController.js";
 
+// Referral
+import { getReferralInfo } from "../controllers/referralController.js";
 
+// Driver status (MAKE SURE THESE EXIST)
+import {
+  setOnlineStatus,
+  updateDriverLocation,
+  getOnlineDrivers,
+} from "../controllers/driverStatusController.js";
 
-
+/* ============================================================
+   ROUTER
+============================================================ */
 const router = express.Router();
+
+/* ============================================================
+   DRIVER STATUS
+============================================================ */
+
+// Online / Offline
+router.post("/status", verifyToken, setOnlineStatus);
+
+// Live GPS (REST fallback)
+router.post("/location", verifyToken, updateDriverLocation);
+
+// Online drivers (admin)
+router.get("/status/online", verifyToken, async (req, res) => {
+  const result = await getOnlineDrivers();
+  res.json(result);
+});
 
 /* ============================================================
    DRIVER PROFILE / OVERVIEW
 ============================================================ */
 router.get("/profile", verifyToken, getDriverProfile);
-
-// ⭐ NEW — Update driver profile (Name, Phone, Email, Gender, DOB)
 router.put("/profile", verifyToken, updateDriverProfile);
-
 router.get("/overview", verifyToken, getDriverOverview);
 
 /* ============================================================
@@ -58,48 +86,29 @@ router.post("/vehicle/update", verifyToken, updateVehicleDetails);
 router.get("/documents", verifyToken, getDriverDocuments);
 
 /* ============================================================
-   EARNINGS
+   WALLET
 ============================================================ */
-router.get("/earnings/:driverId", verifyToken, getEarningsSummary);
-
-/* ============================================================
-   WALLET (FULL MODULE)
-============================================================ */
-
-// Wallet Summary (balance + last 10 transactions)
 router.get("/wallet", verifyToken, getWalletOverview);
-
-// Paginated transaction list
 router.get("/wallet/transactions", verifyToken, getWalletTransactions);
-
-// Request Payout
 router.post("/wallet/payout", verifyToken, requestPayout);
-
-// Send Money (Wallet → Wallet)
 router.post("/wallet/send", verifyToken, sendMoney);
-
-// Receive Info (Wallet Address + QR payload)
 router.get("/wallet/receive", verifyToken, getReceiveInfo);
 
 /* ============================================================
-   Account Delete
+   ACCOUNT
 ============================================================ */
 router.post("/account/delete", verifyToken, deleteDriverAccount);
 
 /* ============================================================
-   Application feedback
+   APP FEEDBACK & SETTINGS
 ============================================================ */
 router.post("/suggestions", verifyToken, submitSuggestion);
-
 router.put("/settings", verifyToken, updateSettings);
 router.put("/settings/notifications", verifyToken, updateNotificationSettings);
 
-
 /* ============================================================
-   Invite a friend
+   REFERRALS
 ============================================================ */
 router.get("/invite", verifyToken, getReferralInfo);
-
-
 
 export default router;
