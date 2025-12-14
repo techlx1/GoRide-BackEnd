@@ -1,6 +1,6 @@
 import express from "express";
 import { verifyToken } from "../middleware/authMiddleware.js";
-import { documentsUpload } from "../config/multerDocuments.js";
+import documentsUpload from "../config/multerDocuments.js";
 import {
   uploadDocument,
   getMyDocuments,
