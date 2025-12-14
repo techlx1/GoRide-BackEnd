@@ -6,12 +6,13 @@ import db from "../config/db.js"; // adjust if your db file is in a different pl
 // ---------------------------------------------------------
 export const submitSuggestion = async (req, res) => {
   try {
-    const { driver_id, message } = req.body;
+    const driver_id = req.user.id; // ✅ from verifyToken
+    const { message } = req.body;
 
-    if (!driver_id || !message) {
+    if (!message) {
       return res.status(400).json({
         success: false,
-        message: "driver_id and message are required",
+        message: "Message is required",
       });
     }
 
@@ -23,20 +24,19 @@ export const submitSuggestion = async (req, res) => {
 
     const result = await db.query(query, [driver_id, message]);
 
-    return res.status(200).json({
+    return res.status(201).json({
       success: true,
       message: "Suggestion submitted successfully",
-      data: result.rows[0],
+      suggestion: result.rows[0],
     });
   } catch (error) {
-    console.error("Submit Suggestion Error:", error);
+    console.error("❌ Submit Suggestion Error:", error);
     return res.status(500).json({
       success: false,
       message: "Server error submitting suggestion",
     });
   }
 };
-
 // ---------------------------------------------------------
 // ⚙️ 2. UPDATE ACCOUNT SETTINGS (example only)
 // ---------------------------------------------------------
