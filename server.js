@@ -10,8 +10,9 @@ import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
 
 // Socket
-import initSocket from "./config/socketInit.js"; // your socket.io initializer
+import { initSocket } from "./config/socket.js"; // your socket.io initializer
 import { initIO } from "./config/socket.js";     // socket singleton
+
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
