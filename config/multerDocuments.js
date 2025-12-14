@@ -1,6 +1,8 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import documentsUpload from "../config/multerDocuments.js";
+
 
 // Directory for documents
 const uploadDir = "uploads/documents";

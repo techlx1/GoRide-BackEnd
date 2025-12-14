@@ -2,26 +2,32 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import fileUpload from "express-fileupload";   // ⭐ ADDED
+import fileUpload from "express-fileupload";
+import http from "http";
+
+// Config
 import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
 
-// Route Imports
+// Socket
+import initSocket from "./config/socketInit.js"; // your socket.io initializer
+import { initIO } from "./config/socket.js";     // socket singleton
+
+// Routes
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profile.js";
 import ridesRoutes from "./routes/rides.js";
-//import driverStatusRoutes from "./routes/driverStatus.js";
 import driverRoutes from "./routes/driverRoutes.js";
-//import driverOverviewRoutes from "./routes/driverOverview.js";
-//import driverEarningsRoutes from "./routes/driverEarnings.js";
 import debugRoutes from "./routes/debugRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import appRoutes from "./routes/appRoutes.js";
 import notificationsRoutes from "./routes/notifications.js";
 
-
 dotenv.config();
 
+// ======================================================
+// 🚀 Express App
+// ======================================================
 const app = express();
 
 // ======================================================
@@ -39,7 +45,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ======================================================
-// ⭐ IMPORTANT: File Upload Middleware (Fixes Your Error)
+// 📁 File Upload Middleware
 // ======================================================
 app.use(
   fileUpload({
@@ -61,8 +67,7 @@ app.use("/api/app", appRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/notifications", notificationsRoutes);
 
-
-// serve uploaded images
+// Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 
 // ======================================================
@@ -77,7 +82,7 @@ app.get("/", (req, res) => {
 });
 
 // ======================================================
-// 🧠 Quick Database Test
+// 🧠 Database Test
 // ======================================================
 app.get("/api/test-db", async (req, res) => {
   try {
@@ -88,7 +93,6 @@ app.get("/api/test-db", async (req, res) => {
       time: result.rows[0].now,
     });
   } catch (error) {
-    console.error("❌ Database connection failed:", error);
     res.status(500).json({
       success: false,
       message: "❌ Database connection failed",
@@ -98,36 +102,21 @@ app.get("/api/test-db", async (req, res) => {
 });
 
 // ======================================================
-// 🧭 Debug Route — List All Registered Routes
+// 🌐 HTTP SERVER + SOCKET.IO
 // ======================================================
-app.get("/api/debug/routes", (req, res) => {
-  const routes = [];
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-      routes.push({
-        method: Object.keys(middleware.route.methods)[0].toUpperCase(),
-        path: middleware.route.path,
-      });
-    } else if (middleware.name === "router") {
-      middleware.handle.stack.forEach((handler) => {
-        const route = handler.route;
-        if (route) {
-          routes.push({
-            method: Object.keys(route.methods)[0].toUpperCase(),
-            path: route.path,
-          });
-        }
-      });
-    }
-  });
-  res.json({ success: true, totalRoutes: routes.length, routes });
-});
+const server = http.createServer(app);
+
+// Init socket.io
+const io = initSocket(server);
+
+// Register socket globally (for controllers)
+initIO(io);
 
 // ======================================================
-// 🖥️ Start Server
+// ▶️ Start Server
 // ======================================================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 G-Ride Backend running on port ${PORT}`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log("🧩 Connected to:", process.env.DATABASE_URL);
