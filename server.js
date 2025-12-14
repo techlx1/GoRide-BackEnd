@@ -11,7 +11,6 @@ import supabase from "./config/supabaseClient.js";
 
 // Socket
 import { initSocket } from "./config/socket.js"; // your socket.io initializer
-import { initIO } from "./config/socket.js";     // socket singleton
 
 
 // Routes
@@ -107,11 +106,8 @@ app.get("/api/test-db", async (req, res) => {
 // ======================================================
 const server = http.createServer(app);
 
-// Init socket.io
-const io = initSocket(server);
-
-// Register socket globally (for controllers)
-initIO(io);
+// ✅ Initialize socket.io ONCE
+initSocket(server);
 
 // ======================================================
 // ▶️ Start Server
