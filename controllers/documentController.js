@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { getIO } from "../socket.js"; // ✅ Socket singleton
+import { getIO } from "../../socket.js"; // ✅ Socket singleton
 
 /**
  * PATCH /api/documents/:id/status
