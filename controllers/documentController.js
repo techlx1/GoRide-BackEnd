@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { getIO } from "../socket.js"; // ✅ Socket singleton
 
 /**
  * PATCH /api/documents/:id/status
@@ -21,7 +22,7 @@ export const updateDocumentStatus = async (req, res) => {
     // 2️⃣ Get document info
     const docResult = await pool.query(
       `
-      SELECT driver_id, doc_type 
+      SELECT driver_id, doc_type
       FROM driver_documents
       WHERE id = $1
       `,
@@ -37,7 +38,7 @@ export const updateDocumentStatus = async (req, res) => {
 
     const { driver_id, doc_type } = docResult.rows[0];
 
-    // 3️⃣ Update status
+    // 3️⃣ Update document status
     const updateResult = await pool.query(
       `
       UPDATE driver_documents
@@ -64,7 +65,7 @@ export const updateDocumentStatus = async (req, res) => {
         : `Your ${doc_type.replace("_", " ")} was rejected.`;
     }
 
-    // 5️⃣ Insert notification only for approved/rejected
+    // 5️⃣ Save notification + emit socket event
     if (status !== "pending") {
       await pool.query(
         `
@@ -73,6 +74,15 @@ export const updateDocumentStatus = async (req, res) => {
         `,
         [driver_id, title, message]
       );
+
+      // 🔔 REAL-TIME SOCKET EMIT
+      const io = getIO();
+      io.to(`driver_${driver_id}`).emit("notification", {
+        title,
+        message,
+        type: "document",
+        created_at: new Date().toISOString(),
+      });
     }
 
     return res.json({
@@ -80,7 +90,6 @@ export const updateDocumentStatus = async (req, res) => {
       message: "Status updated successfully.",
       document: updateResult.rows[0],
     });
-
   } catch (error) {
     console.error("Update Status Error:", error);
     return res.status(500).json({
