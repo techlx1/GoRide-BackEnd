@@ -19,7 +19,7 @@ export const uploadDocument = async (req, res) => {
     const driverId = req.user.id;
     const { doc_type } = req.body;
 
-    // 🔒 Enforce allowed document types
+    // 🔒 Validate document type
     if (!ALLOWED_DOCUMENT_TYPES.has(doc_type)) {
       return res.status(400).json({
         success: false,
@@ -34,7 +34,7 @@ export const uploadDocument = async (req, res) => {
       });
     }
 
-    const fileUrl = req.file.path; // use req.file.location if S3
+    const fileUrl = req.file.path; // or req.file.location if S3
 
     const result = await pool.query(
       `
@@ -200,7 +200,7 @@ export const updateDocumentStatus = async (req, res) => {
 
     await client.query("COMMIT");
 
-    // 🔌 Socket emit after commit
+    // 🔌 Emit socket AFTER commit
     try {
       const io = getIO();
       io.to(`driver_${document.driver_id}`).emit("notification", {
@@ -229,13 +229,4 @@ export const updateDocumentStatus = async (req, res) => {
   } finally {
     client.release();
   }
-};
-
-/* ============================================================
-   EXPLICIT EXPORTS (ESM SAFE)
-============================================================ */
-export {
-  uploadDocument,
-  getMyDocuments,
-  updateDocumentStatus,
 };
