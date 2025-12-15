@@ -25,7 +25,7 @@ router.post(
 router.get("/me", verifyToken, getMyDocuments);
 
 /* ============================================================
-   ADMIN – UPDATE VERIFICATION STATUS (APPROVE / REJECT)
+   ADMIN – UPDATE VERIFICATION STATUS
 ============================================================ */
 router.patch(
   "/:id/status",
