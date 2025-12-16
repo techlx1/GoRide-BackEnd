@@ -383,3 +383,43 @@ export const getEarningsSummary = async (req, res) => {
     });
   }
 };
+/*
+==============================================================
+  Recent Order
+==============================================================
+*/
+export const getRecentOrders = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+
+    const result = await db.query(
+      `
+      SELECT
+        id,
+        pickup_address,
+        dropoff_address,
+        fare_amount,
+        distance_km,
+        duration_min,
+        status,
+        created_at
+      FROM rides
+      WHERE driver_id = $1
+      ORDER BY created_at DESC
+      LIMIT 20
+      `,
+      [driverId]
+    );
+
+    return res.json({
+      success: true,
+      rides: result.rows,
+    });
+  } catch (error) {
+    console.error('❌ Recent orders error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error fetching recent orders',
+    });
+  }
+};
