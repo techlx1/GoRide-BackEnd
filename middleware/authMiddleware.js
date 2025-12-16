@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
+import pool from "../config/db.js";
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // No Authorization header at all
     if (!authHeader) {
       return res.status(401).json({
         success: false,
@@ -12,7 +12,6 @@ export const verifyToken = (req, res, next) => {
       });
     }
 
-    // Format must be: Bearer <token>
     const parts = authHeader.split(" ");
     if (parts.length !== 2 || parts[0] !== "Bearer") {
       return res.status(401).json({
@@ -23,21 +22,42 @@ export const verifyToken = (req, res, next) => {
 
     const token = parts[1];
 
-    if (!token) {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 🔒 Fetch user from DB to validate status
+    const q = await pool.query(
+      `
+      SELECT id, email, user_type, is_deleted
+      FROM profiles
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [decoded.id]
+    );
+
+    const user = q.rows[0];
+
+    // ❌ User not found
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Token missing",
+        message: "Account not found",
       });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // ❌ User soft-deleted
+    if (user.is_deleted) {
+      return res.status(403).json({
+        success: false,
+        message: "Account has been deleted",
+      });
+    }
 
-    // Attach clean user object
+    // ✅ Attach verified user
     req.user = {
-      id: decoded.id,
-      email: decoded.email || null,
-      role: decoded.role || "driver",
+      id: user.id,
+      email: user.email,
+      role: user.user_type,
     };
 
     next();

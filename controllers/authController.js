@@ -63,31 +63,41 @@ export const loginUser = async (req, res) => {
     const { email, phone, password } = req.body;
 
     if ((!email && !phone) || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing email/phone or password" });
+      return res.status(400).json({
+        success: false,
+        message: "Missing email/phone or password",
+      });
     }
 
     const field = email ? "email" : "phone";
     const value = email ? email.toLowerCase() : phone;
 
     const q = await pool.query(
-      `SELECT * FROM profiles WHERE ${field} = $1 LIMIT 1`,
+      `
+      SELECT *
+      FROM profiles
+      WHERE ${field} = $1
+        AND is_deleted = false
+      LIMIT 1
+      `,
       [value]
     );
 
     const user = q.rows[0];
+
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(401).json({
+        success: false,
+        message: "Account not found or has been deleted",
+      });
     }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid password" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
     }
 
     const token = jwt.sign(
@@ -113,6 +123,7 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 /**
  * REQUEST PASSWORD RESET (mock)
