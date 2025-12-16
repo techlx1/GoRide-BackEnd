@@ -3,8 +3,7 @@ import express from "express";
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { submitSuggestion } from '../controllers/settingsController.js';
 
-import { updateLanguage } from '../controllers/appController.js';
-
+import { updateLanguage } from '../controllers/settingsController.js';
 
 
 
