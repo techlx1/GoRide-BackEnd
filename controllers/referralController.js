@@ -1,50 +1,64 @@
 import supabase from "../config/supabaseClient.js";
+import crypto from "crypto";
 
 export const getReferralInfo = async (req, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
     const driverId = req.user.id;
 
-    // Check if driver already has referral record
-    let { data, error } = await supabase
+    // 1️⃣ Check existing referral
+    const { data: existing, error: fetchErr } = await supabase
       .from("referrals")
-      .select("*")
+      .select("referral_code, share_link")
       .eq("driver_id", driverId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (fetchErr) throw fetchErr;
 
-    // If missing, create referral code
-    if (!data) {
-      const code = "GR" + driverId.replace(/-/g, "").slice(0, 8).toUpperCase();
-      const link = `https://g-ride.app/signup?ref=${code}`;
-
-      const { data: newRef, error: insertErr } = await supabase
-        .from("referrals")
-        .insert([
-          {
-            driver_id: driverId,
-            referral_code: code,
-            share_link: link,
-          },
-        ])
-        .select()
-        .maybeSingle();
-
-      if (insertErr) throw insertErr;
-
-      data = newRef;
+    if (existing) {
+      return res.json({
+        success: true,
+        referral_code: existing.referral_code,
+        share_link: existing.share_link,
+      });
     }
+
+    // 2️⃣ Generate SAFE unique code
+    const code = "GR" + crypto.randomBytes(4).toString("hex").toUpperCase();
+    const link = `https://g-ride.app/signup?ref=${code}`;
+
+    // 3️⃣ Insert referral
+    const { data: inserted, error: insertErr } = await supabase
+      .from("referrals")
+      .insert([
+        {
+          driver_id: driverId,
+          referral_code: code,
+          share_link: link,
+        },
+      ])
+      .select("referral_code, share_link")
+      .maybeSingle();
+
+    if (insertErr) throw insertErr;
 
     return res.json({
       success: true,
-      referral_code: data.referral_code,
-      share_link: data.share_link,
+      referral_code: inserted.referral_code,
+      share_link: inserted.share_link,
     });
   } catch (err) {
-    console.error("Referral Error:", err);
+    console.error("❌ Referral Error:", err.message);
+
     return res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Failed to generate referral",
     });
   }
 };
