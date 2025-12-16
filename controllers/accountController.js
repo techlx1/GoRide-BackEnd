@@ -30,16 +30,13 @@ export const deleteDriverAccount = async (req, res) => {
         message: "Driver not found",
       });
 
-    // Perform soft delete
-    const { error: deleteErr } = await supabase
-      .from("profiles")
-      .update({
-        is_deleted: true,
-        deleted_at: new Date().toISOString(),
-      })
-      .eq("id", driverId);
+      //Block deleted users everywhere
+ if (req.user.is_deleted) {
+  return res.status(403).json({
+    message: "Account has been deleted",
+  });
+}
 
-    if (deleteErr) throw deleteErr;
 
     // OPTIONAL: Disable driver vehicle + documents
     await supabase
