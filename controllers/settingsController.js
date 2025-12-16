@@ -124,3 +124,43 @@ export const updateNotificationSettings = async (req, res) => {
     });
   }
 };
+// ---------------------------------------------------------
+// 🌍 4. UPDATE APP LANGUAGE
+// ---------------------------------------------------------
+export const updateLanguage = async (req, res) => {
+  try {
+    const driver_id = req.user.id; // ✅ from verifyToken
+    const { language } = req.body;
+
+    if (!language) {
+      return res.status(400).json({
+        success: false,
+        message: "Language code is required",
+      });
+    }
+
+    const query = `
+      INSERT INTO driver_settings (driver_id, language)
+      VALUES ($1, $2)
+      ON CONFLICT (driver_id)
+      DO UPDATE SET
+        language = EXCLUDED.language,
+        updated_at = NOW()
+      RETURNING driver_id, language
+    `;
+
+    const result = await db.query(query, [driver_id, language]);
+
+    return res.json({
+      success: true,
+      message: "Language updated successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("❌ Update Language Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error updating language",
+    });
+  }
+};
