@@ -1,113 +1,109 @@
 // controllers/earningsController.js
 import { supabase } from "../config/supabaseClient.js";
 
-
 /**
- * 💰 Get earnings summary for a specific driver
- * Route: GET /api/driver/earnings/:driverId
+ * 💰 Get earnings summary for logged-in driver
+ * Route: GET /api/driver/earnings
+ * Auth: JWT (driver_id extracted from token)
  */
 export const getEarningsSummary = async (req, res) => {
   try {
-    const driverId = req.params.driverId;
+    const driverId = req.user?.id; // ✅ from JWT middleware
 
     if (!driverId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: "Driver ID is required",
+        message: "Unauthorized",
       });
     }
 
-    // 1️⃣ Fetch earnings for the driver
+    // --------------------------------------------------
+    // 1️⃣ Fetch earnings history
+    // --------------------------------------------------
     const { data: earningsData, error: earningsError } = await supabase
       .from("earnings")
       .select("amount, date")
-      .eq("driver_id", driverId);
+      .eq("driver_id", driverId)
+      .order("date", { ascending: false })
+      .limit(20);
 
     if (earningsError) throw earningsError;
 
-    if (!earningsData || earningsData.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No earnings found",
-        data: {
-          driver_id: driverId,
-          totalEarnings: 0,
-          todayEarnings: 0,
-          weekEarnings: 0,
-          monthEarnings: 0,
-          completedRides: 0,
-          pendingPayments: 0,
-          currency: "GYD",
-          lastUpdated: new Date().toISOString(),
-        },
-      });
-    }
-
-    // 2️⃣ Date References
-    const todayStr = new Date().toISOString().split("T")[0];
+    // --------------------------------------------------
+    // 2️⃣ Date references
+    // --------------------------------------------------
     const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - 7);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // 3️⃣ Summary counters
     let todayEarnings = 0;
     let weekEarnings = 0;
     let monthEarnings = 0;
     let totalEarnings = 0;
 
-    earningsData.forEach((entry) => {
+    (earningsData || []).forEach((entry) => {
       const amount = Number(entry.amount) || 0;
       const entryDate = new Date(entry.date);
+      const entryDay = entryDate.toISOString().split("T")[0];
 
       totalEarnings += amount;
-      if (entry.date === todayStr) todayEarnings += amount;
+      if (entryDay === todayStr) todayEarnings += amount;
       if (entryDate >= weekStart) weekEarnings += amount;
       if (entryDate >= monthStart) monthEarnings += amount;
     });
 
-    // 4️⃣ Completed rides count
-    const { count: completedRides, error: ridesError } = await supabase
+    // --------------------------------------------------
+    // 3️⃣ Completed rides
+    // --------------------------------------------------
+    const { count: completedRides } = await supabase
       .from("rides")
       .select("*", { count: "exact", head: true })
       .eq("driver_id", driverId)
       .eq("status", "completed");
 
-    if (ridesError) throw ridesError;
-
-    // 5️⃣ Pending payments count
-    const { count: pendingPayments, error: pendingError } = await supabase
+    // --------------------------------------------------
+    // 4️⃣ Pending payments
+    // --------------------------------------------------
+    const { count: pendingPayments } = await supabase
       .from("rides")
       .select("*", { count: "exact", head: true })
       .eq("driver_id", driverId)
       .eq("payment_status", "pending");
 
-    if (pendingError) throw pendingError;
-
-    // 6️⃣ Final structured summary
-    const summary = {
-      driver_id: driverId,
-      currency: "GYD",
-      totalEarnings,
-      todayEarnings,
-      weekEarnings,
-      monthEarnings,
-      completedRides: completedRides || 0,
-      pendingPayments: pendingPayments || 0,
-      lastUpdated: new Date().toISOString(),
-    };
-
+    // --------------------------------------------------
+    // 5️⃣ FINAL RESPONSE (Flutter-safe)
+    // --------------------------------------------------
     return res.status(200).json({
       success: true,
       message: "Earnings summary retrieved successfully",
-      data: summary,
+      data: {
+        currency: "GYD",
+
+        // summary
+        todayEarnings,
+        weekEarnings,
+        monthEarnings,
+        totalEarnings,
+
+        completedRides: completedRides || 0,
+        pendingPayments: pendingPayments || 0,
+
+        // 👇 REQUIRED by Flutter UI
+        history: (earningsData || []).map((e) => ({
+          date: e.date,
+          amount: Number(e.amount) || 0,
+        })),
+
+        lastUpdated: new Date().toISOString(),
+      },
     });
   } catch (err) {
     console.error("❌ getEarningsSummary Error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message,
     });
   }
 };

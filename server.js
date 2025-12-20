@@ -10,8 +10,7 @@ import pool from "./config/db.js";
 import supabase from "./config/supabaseClient.js";
 
 // Socket
-import { initSocket } from "./config/socket.js"; // your socket.io initializer
-
+import { initSocket } from "./config/socket.js";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -31,7 +30,7 @@ dotenv.config();
 const app = express();
 
 // ======================================================
-// 🔧 Base Middlewares
+// 🔧 Base Middlewares (FAST)
 // ======================================================
 app.use(
   cors({
@@ -67,6 +66,11 @@ app.use("/api/app", appRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/notifications", notificationsRoutes);
 
+// ======================================================
+// 🩺 Health Check (IMPORTANT FOR RENDER)
+// ======================================================
+app.get("/health", (_, res) => res.status(200).send("OK"));
+
 // Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 
@@ -82,39 +86,34 @@ app.get("/", (req, res) => {
 });
 
 // ======================================================
-// 🧠 Database Test
-// ======================================================
-app.get("/api/test-db", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT NOW()");
-    res.json({
-      success: true,
-      message: "✅ PostgreSQL connected successfully!",
-      time: result.rows[0].now,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "❌ Database connection failed",
-      error: error.message,
-    });
-  }
-});
-
-// ======================================================
-// 🌐 HTTP SERVER + SOCKET.IO
+// 🌐 HTTP SERVER
 // ======================================================
 const server = http.createServer(app);
 
-// ✅ Initialize socket.io ONCE
-initSocket(server);
-
 // ======================================================
-// ▶️ Start Server
+// ▶️ START SERVER FIRST (CRITICAL)
 // ======================================================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 G-Ride Backend running on port ${PORT}`);
-  console.log(`📦 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log("🧩 Connected to:", process.env.DATABASE_URL);
+  console.log(`📦 Environment: ${process.env.NODE_ENV || "production"}`);
 });
+
+// ======================================================
+// 🔌 INIT SOCKET.IO AFTER SERVER IS LISTENING
+// ======================================================
+initSocket(server);
+console.log("🔌 Socket.IO initialized");
+
+// ======================================================
+// 🧠 CONNECT DB IN BACKGROUND (NON-BLOCKING)
+// ======================================================
+(async () => {
+  try {
+    const client = await pool.connect();
+    console.log("🧩 Connected to:", process.env.DATABASE_URL);
+    client.release();
+  } catch (err) {
+    console.error("❌ Database connection error:", err.message);
+  }
+})();
