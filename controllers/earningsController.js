@@ -1,15 +1,15 @@
 // controllers/earningsController.js
 import { supabase } from "../config/supabaseClient.js";
+import redis from "../config/redisClient.js";
 
 /**
  * 💰 Get earnings summary for logged-in driver
  * Route: GET /api/driver/earnings
- * Auth: JWT (driver_id extracted from token)
+ * Auth: JWT
  */
 export const getEarningsSummary = async (req, res) => {
   try {
-    const driverId = req.user?.id; // ✅ from JWT middleware
-
+    const driverId = req.user?.id;
     if (!driverId) {
       return res.status(401).json({
         success: false,
@@ -17,8 +17,23 @@ export const getEarningsSummary = async (req, res) => {
       });
     }
 
+    const cacheKey = `driver:earnings:${driverId}`;
+
     // --------------------------------------------------
-    // 1️⃣ Fetch earnings history
+    // 1️⃣ CHECK CACHE (FAST PATH)
+    // --------------------------------------------------
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({
+        success: true,
+        cached: true,
+        message: "Earnings summary retrieved (cached)",
+        data: JSON.parse(cached),
+      });
+    }
+
+    // --------------------------------------------------
+    // 2️⃣ FETCH EARNINGS HISTORY
     // --------------------------------------------------
     const { data: earningsData, error: earningsError } = await supabase
       .from("earnings")
@@ -30,7 +45,7 @@ export const getEarningsSummary = async (req, res) => {
     if (earningsError) throw earningsError;
 
     // --------------------------------------------------
-    // 2️⃣ Date references
+    // 3️⃣ DATE REFERENCES
     // --------------------------------------------------
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
@@ -55,7 +70,7 @@ export const getEarningsSummary = async (req, res) => {
     });
 
     // --------------------------------------------------
-    // 3️⃣ Completed rides
+    // 4️⃣ COMPLETED RIDES
     // --------------------------------------------------
     const { count: completedRides } = await supabase
       .from("rides")
@@ -64,7 +79,7 @@ export const getEarningsSummary = async (req, res) => {
       .eq("status", "completed");
 
     // --------------------------------------------------
-    // 4️⃣ Pending payments
+    // 5️⃣ PENDING PAYMENTS
     // --------------------------------------------------
     const { count: pendingPayments } = await supabase
       .from("rides")
@@ -73,31 +88,42 @@ export const getEarningsSummary = async (req, res) => {
       .eq("payment_status", "pending");
 
     // --------------------------------------------------
-    // 5️⃣ FINAL RESPONSE (Flutter-safe)
+    // 6️⃣ FINAL DATA OBJECT
     // --------------------------------------------------
+    const summary = {
+      currency: "GYD",
+
+      todayEarnings,
+      weekEarnings,
+      monthEarnings,
+      totalEarnings,
+
+      completedRides: completedRides || 0,
+      pendingPayments: pendingPayments || 0,
+
+      history: (earningsData || []).map((e) => ({
+        date: e.date,
+        amount: Number(e.amount) || 0,
+      })),
+
+      lastUpdated: new Date().toISOString(),
+    };
+
+    // --------------------------------------------------
+    // 7️⃣ SAVE TO CACHE (60s TTL)
+    // --------------------------------------------------
+    await redis.set(
+      cacheKey,
+      JSON.stringify(summary),
+      "EX",
+      60 // seconds
+    );
+
     return res.status(200).json({
       success: true,
+      cached: false,
       message: "Earnings summary retrieved successfully",
-      data: {
-        currency: "GYD",
-
-        // summary
-        todayEarnings,
-        weekEarnings,
-        monthEarnings,
-        totalEarnings,
-
-        completedRides: completedRides || 0,
-        pendingPayments: pendingPayments || 0,
-
-        // 👇 REQUIRED by Flutter UI
-        history: (earningsData || []).map((e) => ({
-          date: e.date,
-          amount: Number(e.amount) || 0,
-        })),
-
-        lastUpdated: new Date().toISOString(),
-      },
+      data: summary,
     });
   } catch (err) {
     console.error("❌ getEarningsSummary Error:", err);
