@@ -19,7 +19,6 @@ export const uploadDocument = async (req, res) => {
     const driverId = req.user.id;
     const { doc_type } = req.body;
 
-    // 🔒 Validate document type
     if (!ALLOWED_DOCUMENT_TYPES.has(doc_type)) {
       return res.status(400).json({
         success: false,
@@ -34,20 +33,20 @@ export const uploadDocument = async (req, res) => {
       });
     }
 
-    const fileUrl = req.file.path; // or req.file.location if S3
+    const fileUrl = req.file.path;
 
     const result = await pool.query(
       `
-      INSERT INTO driver_documents (driver_id, doc_type, file_url, status)
-      VALUES ($1, $2, $3, 'pending')
-      RETURNING id, doc_type, status, uploaded_at
+      INSERT INTO driver_documents (driver_id, doc_type, file_url)
+      VALUES ($1, $2, $3)
+      RETURNING id, doc_type, uploaded_at
       `,
       [driverId, doc_type, fileUrl]
     );
 
     return res.status(201).json({
       success: true,
-      message: "Document uploaded successfully",
+      message: "Document uploaded",
       document: result.rows[0],
     });
   } catch (error) {
@@ -58,6 +57,7 @@ export const uploadDocument = async (req, res) => {
     });
   }
 };
+
 
 /* ============================================================
    DRIVER – GET OWN DOCUMENTS
