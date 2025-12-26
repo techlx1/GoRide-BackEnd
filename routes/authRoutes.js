@@ -1,7 +1,8 @@
 import express from "express";
 import {
   registerUser,
-  loginUser,
+  loginWithOtp,
+  verifyOtp,
   requestPasswordReset,
   verifyPasswordReset,
 } from "../controllers/authController.js";
@@ -9,25 +10,26 @@ import {
 const router = express.Router();
 
 /**
- * 📝 REGISTER
+ * 📝 REGISTER (optional – admin / future use)
  * POST /api/auth/register
  */
 router.post("/register", registerUser);
 
 /**
- * 🔐 LOGIN
- * POST /api/auth/login
+ * 🔐 DRIVER LOGIN (OTP)
+ * POST /api/auth/login-with-otp
  */
-router.post("/login", loginUser);
+router.post("/login-with-otp", loginWithOtp);
+router.post("/verify-otp", verifyOtp);
 
 /**
- * 🔑 REQUEST RESET
+ * 🔑 REQUEST PASSWORD RESET (mock)
  * POST /api/auth/request-reset
  */
 router.post("/request-reset", requestPasswordReset);
 
 /**
- * 🔄 VERIFY RESET
+ * 🔄 VERIFY PASSWORD RESET (mock)
  * POST /api/auth/verify-reset
  */
 router.post("/verify-reset", verifyPasswordReset);
