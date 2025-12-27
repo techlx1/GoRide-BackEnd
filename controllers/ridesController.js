@@ -98,3 +98,28 @@ export const updateRideStatus = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+// 🟠 Get recent rides for logged-in DRIVER
+export const getRecentOrders = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+
+    const { data, error } = await supabase
+      .from("rides")
+      .select("*")
+      .eq("driver_id", driverId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
