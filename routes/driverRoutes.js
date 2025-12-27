@@ -5,15 +5,17 @@ import { verifyToken } from "../middleware/authMiddleware.js";
    CONTROLLERS
 ============================================================ */
 
-// Driver
+// Driver (PROFILE / CORE ONLY)
 import {
   getDriverProfile,
   getDriverOverview,
   getDriverVehicle,
   getDriverDocuments,
   updateDriverProfile,
-  getRecentOrders,
 } from "../controllers/driverController.js";
+
+// Rides (RECENT ORDERS)
+import { getRecentOrders } from "../controllers/ridesController.js";
 
 // Vehicle
 import { updateVehicleDetails } from "../controllers/vehicleController.js";
@@ -30,8 +32,6 @@ import {
 // Earnings
 import { getEarningsSummary } from "../controllers/earningsController.js";
 
-
-
 // Account
 import { deleteDriverAccount } from "../controllers/accountController.js";
 
@@ -45,7 +45,7 @@ import {
 // Referral
 import { getReferralInfo } from "../controllers/referralController.js";
 
-// Driver status (MAKE SURE THESE EXIST)
+// Driver status
 import {
   setOnlineStatus,
   updateDriverLocation,
@@ -80,7 +80,6 @@ router.get("/status/online", verifyToken, async (req, res) => {
   }
 });
 
-
 /* ============================================================
    DRIVER PROFILE / OVERVIEW
 ============================================================ */
@@ -100,10 +99,14 @@ router.post("/vehicle/update", verifyToken, updateVehicleDetails);
 router.get("/documents", verifyToken, getDriverDocuments);
 
 /* ============================================================
+   RIDES (RECENT ORDERS)
+============================================================ */
+router.get("/rides/recent", verifyToken, getRecentOrders);
+
+/* ============================================================
    EARNINGS
 ============================================================ */
 router.get("/earnings", verifyToken, getEarningsSummary);
-
 
 /* ============================================================
    WALLET
@@ -113,7 +116,6 @@ router.get("/wallet/transactions", verifyToken, getWalletTransactions);
 router.post("/wallet/payout", verifyToken, requestPayout);
 router.post("/wallet/send", verifyToken, sendMoney);
 router.get("/wallet/receive", verifyToken, getReceiveInfo);
-
 
 /* ============================================================
    ACCOUNT
@@ -131,18 +133,6 @@ router.put("/settings/notifications", verifyToken, updateNotificationSettings);
    REFERRALS
 ============================================================ */
 router.get("/invite", verifyToken, getReferralInfo);
-router.get(
-  "/referral",
-  verifyToken,
-  getReferralInfo
-);
-
-/* ============================================================
-   REcent order
-============================================================ */
-router.get('/rides/recent', verifyToken, getRecentOrders);
-
-
-
+router.get("/referral", verifyToken, getReferralInfo);
 
 export default router;
